@@ -737,3 +737,23 @@ class HubspotPZ:
     def mergeContacts(self, main_contact_id: str, contact_to_merge_id: str) -> bool:
         return self._mergeObjects("contacts", main_contact_id, contact_to_merge_id)
     
+    ##########Files############################################
+
+    def get_file_signed_url(self, file_id: str) -> Optional[Any]:
+        """
+        Funzione per ottenere l'URL firmato di un file su HubSpot.
+        Versione API V3.
+        
+        :param file_id: ID del file da ottenere
+        :return: URL firmato del file, oppure None in caso di errore
+        """
+
+        endpoint = self._BASER_URL + f'/files/v3/files/{file_id}/signed-url'
+
+        r = requests.get(url=endpoint, headers=self._headers)
+
+        if r.status_code != 200:
+            print(f"Error {r.status_code} during the retrieval of the signed URL of a file on HubSpot.\nResponse Body: {r.text}")
+            return None
+        
+        return r.json()
