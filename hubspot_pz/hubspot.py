@@ -5,13 +5,21 @@ from datetime import datetime
 
 class HubspotPZ:
     _BASER_URL = "https://api.hubapi.com"
-    _MAX_BATCH_SIZE = 100
+    _MAX_BATCH_SIZE = 100    
+
+    _AGENT_LIST_ID = 67
+    _AGENT_CONTACTS_LIST_ID = 64
+
     _DEFAULT_CONTACT_PROPERTY_LIST = ["email","firstname","lastname","phone","mobilephone","numero_referente","hs_additional_emails", "fonte"]
     _DEFAULT_AGENT_PROPERTY_LIST = ["codice_mexal", "nome_mexal", "frequenza_liquidazione", "ruolo", "address", "cap", "city", "provincia", "data_inizio_contratto", "data_fine_contratto", "tipologia_contratto", "regione", "province", "note_zona", "dettagli_particolare"]
     _DEFAULT_COMPANY_PROPERTY_LIST = ['codice_mexal','name','alias','partita_iva','categoria_mexal','segmento','city','provincia','region','paese','lingua','data_ultima_fattura','hs_country_code','stagionalita__cloned_','precancellata']
     _DEFAULT_DEAL_PROPERTY_LIST =["dealname", "dealstage", "nome_cliente", "preventivo_confermato", "bozza_confermata"]
-    _AGENT_LIST_ID = 67
-    _AGENT_CONTACTS_LIST_ID = 64
+
+    _CONTACT_PIPELINE_ID = "59157733"
+    _CONTACT_DEAL_PROPERTY_LIST = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "tipologia_prodotto_2", "rivenditore", "nome_cliente", "bozza_confermata", "amount", "motivo_rifiuto", "note", "pretrattativa", "fonte"]
+
+    _AGENT_PIPELINE_ID = "2405411057"
+    _AGENT_DEAL_PROPERTY_LIST = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "motivo_rifiuto", "note"]
 
     def __init__(self, token: str) -> None:
         self._initializeHubspotHeaders(token)
