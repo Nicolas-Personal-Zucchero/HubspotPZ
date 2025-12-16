@@ -104,6 +104,9 @@ class HubspotPZ:
     def getAllCompanies(self, properties_names: List[str]) -> List[Dict[str, str]]:
         return self._getAllObjects("companies", properties_names, associations_objects=["contacts"])
     
+    def getAllDeals(self, properties_names: List[str]) -> List[Dict[str, str]]:
+        return self._getAllObjects("0-3", properties_names, associations_objects=["contacts, companies"])
+
     ##########Single Objects############################################
     
     #Tested and working
