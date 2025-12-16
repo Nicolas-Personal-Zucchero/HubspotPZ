@@ -317,8 +317,8 @@ class HubspotPZ:
         properties["pipeline"] = "59157733"
         return self._createObject("deals", properties)
     
-    def getPipelineInfo(self, pipeline_id: str) -> Any:
-        endpoint = self._BASER_URL + f'/crm/v3/pipelines/deals/{pipeline_id}'
+    def getPipelineInfo(self, object_type: str, pipeline_id: str) -> Any:
+        endpoint = self._BASER_URL + f'/crm/v3/pipelines/{object_type}/{pipeline_id}'
         r = requests.get(url=endpoint, headers=self._headers)
         
         if r.status_code != 200:
