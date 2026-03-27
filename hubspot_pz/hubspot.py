@@ -640,6 +640,7 @@ class HubspotPZ:
         self,
         from_object_type: str,
         to_object_type: str,
+        associationTypeId: str,
         associations: List[Tuple[str, str]]
     ) -> bool:
         
@@ -649,6 +650,7 @@ class HubspotPZ:
 
         :param from_object_type: Tipo degli oggetti di partenza
         :param to_object_type: Tipo degli oggetto di arrivo
+        :param associationTypeId: ID del tipo di associazione da creare
         :param associations: Lista di tuple (toId, fromId) che rappresentano le associazioni da creare
         :return: True se tutto è andato a buon fine, False altrimenti
         """
@@ -657,18 +659,31 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASER_URL + f"/crm/v4/associations/{from_object_type}/{to_object_type}/batch/associate/default"
+        endpoint = self._BASER_URL + f"/crm/v4/associations/{from_object_type}/{to_object_type}/batch/create"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
 
-        r = requests.post(url=endpoint, headers=self._headers, json={ "inputs": [{"from": {"id": toId}, "to": {"id": fromId}} for toId, fromId in batch] })
+        r = requests.post(
+            url = endpoint,
+            headers = self._headers,
+            json = {
+                "inputs": [
+                    {
+                        "from": {"id": toId},
+                        "to": {"id": fromId},
+                        "associationCategory": "HUBSPOT_DEFINED",
+                        "associationTypeId": associationTypeId
+                    } for toId, fromId in batch
+                ]
+            }
+        )
 
         if r.status_code != 200:
             print(f"Error {r.status_code} during the creation in batch of associations between objects.\nResponse Body: {r.text}")
             return False
         
-        return self._createObjectAssociationsBatch(from_object_type, to_object_type, remaining)
+        return self._createObjectAssociationsBatch(from_object_type, to_object_type, associationTypeId, remaining)
 
     def _archiveObjectAssociationsBatch(
         self,
@@ -713,16 +728,16 @@ class HubspotPZ:
         return self._getObjectAssociationsBatch("contacts", "contacts", contacts_ids)
 
     def createContactsAssociatedCompaniesBatch(self, associations: List[Tuple[str, str]]) -> bool:
-        return self._createObjectAssociationsBatch("contacts", "companies", associations)
+        return self._createObjectAssociationsBatch("contacts", "companies", "1", associations)
     
     def archiveContactsAssociatedCompaniesBatch(self, associations: List[Tuple[str, str]]) -> bool:
         return self._archiveObjectAssociationsBatch("contacts", "companies", associations)
     
     def createContactsAssociatedContactsBatch(self, associations: List[Tuple[str, str]]) -> bool:
-        return self._createObjectAssociationsBatch("contacts", "contacts", associations)
+        return self._createObjectAssociationsBatch("contacts", "contacts", "449", associations)
     
     def createContactsAssociatedDealsBatch(self, associations: List[Tuple[str, str]]) -> bool:
-        return self._createObjectAssociationsBatch("deals", "contacts", associations)
+        return self._createObjectAssociationsBatch("deals", "contacts", "3", associations)
 
     ##########Actions############################################
 
