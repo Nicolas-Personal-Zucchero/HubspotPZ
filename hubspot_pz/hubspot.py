@@ -679,7 +679,7 @@ class HubspotPZ:
             }
         )
 
-        if r.status_code != 200:
+        if r.status_code != 201:
             print(f"Error {r.status_code} during the creation in batch of associations between objects.\nResponse Body: {r.text}")
             return False
         
