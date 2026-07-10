@@ -672,8 +672,10 @@ class HubspotPZ:
                     {
                         "from": {"id": fromId},
                         "to": {"id": toId},
-                        "associationCategory": "HUBSPOT_DEFINED",
-                        "associationTypeId": associationTypeId
+                        "types": [{
+                            "associationCategory": "HUBSPOT_DEFINED",
+                            "associationTypeId": associationTypeId
+                        }]
                     } for fromId, toId in batch
                 ]
             }
