@@ -670,8 +670,8 @@ class HubspotPZ:
             json = {
                 "inputs": [
                     {
-                        "from": {"id": toId},
-                        "to": {"id": fromId},
+                        "from": {"id": fromId},
+                        "to": {"id": toId},
                         "associationCategory": "HUBSPOT_DEFINED",
                         "associationTypeId": associationTypeId
                     } for toId, fromId in batch
