@@ -674,7 +674,7 @@ class HubspotPZ:
                         "to": {"id": toId},
                         "associationCategory": "HUBSPOT_DEFINED",
                         "associationTypeId": associationTypeId
-                    } for toId, fromId in batch
+                    } for fromId, toId in batch
                 ]
             }
         )
