@@ -302,11 +302,6 @@ class HubspotPZ:
     def getCompany(self, company_id: str, properties_names: List[str] = []) -> Optional[Dict[str, str]]:
         return self._getObject("companies", company_id, properties_names, associations_objects=["contacts"])
     
-    def getContactSecondaryEmails(self, contact_id: str) -> List[str]:
-        endpoint = self._BASER_URL + f"/contacts/v1/secondary-email/{contact_id}"
-        r = requests.get(url=endpoint, headers=self._headers)
-        return r.json()['secondaryEmails'] if len(r.json()['secondaryEmails']) > 0 else []
-    
     def createAgentDeal(self, properties: Dict[str, str]) -> Optional[str]:
         #https://app-eu1.hubspot.com/property-settings/25378285/properties?type=0-3&eschref=%2Fcontacts%2F25378285%2Fobjects%2F0-3%2Frestore&search=pip&action=edit&property=pipeline
         properties["pipeline"] = "2405411057"
