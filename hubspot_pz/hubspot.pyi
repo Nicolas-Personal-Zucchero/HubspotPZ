@@ -1,10 +1,12 @@
+import logging
 from typing import Any
 
 class HubspotPZ:
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, logger: logging.Logger | None = ...) -> None:
         """Initialize the HubSpot API client.
 
         :param token: HubSpot private access token (Bearer token).
+        :param logger: Optional logger instance for recording API warnings and errors.
         """
     # Properties
     def getContactPropertyInfo(self, property_name: str) -> dict[str, Any] | None:

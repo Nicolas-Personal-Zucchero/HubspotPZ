@@ -14,6 +14,7 @@ Setup:
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -57,7 +58,10 @@ def main() -> None:
         print("    Copy 'template.env' to '.env' and set your HUBSPOT_TOKEN before running the script.")
         return
 
-    client = HubspotPZ(token)
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+    logger = logging.getLogger("playground")
+
+    client = HubspotPZ(token, logger=logger)
     print("[+] HubspotPZ initialized successfully.")
 
     # =============================================================

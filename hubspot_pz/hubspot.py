@@ -1,6 +1,7 @@
 #pip install .
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime
 from typing import Any, ClassVar
 
@@ -26,8 +27,9 @@ class HubspotPZ:
     _AGENT_PIPELINE_ID = "2405411057"
     _AGENT_DEAL_PROPERTY_LIST: ClassVar[list[str]] = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "motivo_rifiuto", "note"]
 
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, logger: logging.Logger | None = None) -> None:
         self._initialize_hubspot_headers(token)
+        self._logger: logging.Logger = logger if logger is not None else logging.getLogger("hubspot_pz")
 
     def _initialize_hubspot_headers(self, token: str) -> None:
         self._headers: dict[str, str] = {
@@ -68,7 +70,7 @@ class HubspotPZ:
         )
 
         if r.status_code not in valid_statuses:
-            print(f"Error {r.status_code} during {error_context}.\nResponse Body: {r.text}")
+            self._logger.error(f"Error {r.status_code} during {error_context}.\nResponse Body: {r.text}")
             return None
 
         return r

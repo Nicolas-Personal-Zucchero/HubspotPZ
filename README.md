@@ -94,12 +94,14 @@ pip install requests
 ## Quick Start
 
 ```python
+import logging
 import os
 from hubspot_pz import HubspotPZ
 
-# Initialize the client
+# Initialize the client (optional logger)
 token = os.getenv("HUBSPOT_TOKEN", "your_token_here")
-client = HubspotPZ(token)
+logger = logging.getLogger("my_app")
+client = HubspotPZ(token, logger=logger)
 
 # Retrieve contacts with requested properties
 contacts = client.getAllContacts(["email", "firstname", "lastname", "phone"])
