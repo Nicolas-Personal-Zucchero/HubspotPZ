@@ -28,6 +28,7 @@ class HubspotPZ:
     _AGENT_DEAL_PROPERTY_LIST: ClassVar[list[str]] = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "motivo_rifiuto", "note"]
 
     def __init__(self, token: str, logger: logging.Logger | None = None) -> None:
+        self._session: requests.Session = requests.Session()
         self._initialize_hubspot_headers(token)
         self._logger: logging.Logger = logger if logger is not None else logging.getLogger("hubspot_pz")
 
@@ -36,6 +37,17 @@ class HubspotPZ:
             "Content-Type": "application/json",
             "Authorization": "Bearer " + token
         }
+        self._session.headers.update(self._headers)
+
+    def close(self) -> None:
+        """Close the underlying requests.Session and release connection pool resources."""
+        self._session.close()
+
+    def __enter__(self) -> HubspotPZ:
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.close()
 
     def _request(
         self,
@@ -61,7 +73,7 @@ class HubspotPZ:
         url = endpoint if endpoint.startswith("http") else f"{self._BASE_URL}{endpoint}"
         valid_statuses = (expected_status,) if isinstance(expected_status, int) else expected_status
 
-        r = requests.request(
+        r = self._session.request(
             method=method.upper(),
             url=url,
             headers=self._headers,

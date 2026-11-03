@@ -109,6 +109,9 @@ contacts = client.getAllContacts(["email", "firstname", "lastname", "phone"])
 if contacts:
     for contact in contacts[:5]:
         print(f"[{contact.get('id')}] {contact.get('firstname')} {contact.get('lastname')} - {contact.get('email')}")
+
+# Close the session when done (or use context manager: `with HubspotPZ(token) as client:`)
+client.close()
 ```
 
 ---

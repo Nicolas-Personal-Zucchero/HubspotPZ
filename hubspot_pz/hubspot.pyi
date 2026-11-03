@@ -8,6 +8,11 @@ class HubspotPZ:
         :param token: HubSpot private access token (Bearer token).
         :param logger: Optional logger instance for recording API warnings and errors.
         """
+    def close(self) -> None:
+        """Close the underlying requests Session and release connection pool resources."""
+
+    def __enter__(self) -> HubspotPZ: ...
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
     # Properties
     def getContactPropertyInfo(self, property_name: str) -> dict[str, Any] | None:
         """Retrieve metadata and schema definition for a contact property.

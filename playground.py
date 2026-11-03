@@ -85,10 +85,10 @@ def main() -> None:
     # -------------------------------------------------------------
     # 2. READ ALL OBJECTS (2026-09, Automatic Pagination) -> TESTED
     # -------------------------------------------------------------
-    # print("\n--- Fetching All Contacts (first 3) ---")
-    # contacts = client.getAllContacts(["email", "firstname", "lastname"])
-    # print("Total Contacts:", len(contacts) if contacts else 0)
-    # pretty_print("Contacts (first 3)", contacts[:3] if contacts else [])
+    print("\n--- Fetching All Contacts (first 3) ---")
+    contacts = client.getAllContacts(["email", "firstname", "lastname"])
+    print("Total Contacts:", len(contacts) if contacts else 0)
+    pretty_print("Contacts (first 3)", contacts[:3] if contacts else [])
 
     # print("\n--- Fetching All Companies (first 3) ---")
     # companies = client.getAllCompanies(["name", "domain", "city"])
