@@ -35,6 +35,44 @@ class HubspotPZ:
             "Authorization": "Bearer " + token
         }
 
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: Any | None = None,
+        expected_status: int | tuple[int, ...] = 200,
+        error_context: str = "an operation on HubSpot"
+    ) -> requests.Response | None:
+        """
+        Internal helper to execute HTTP requests with standardized headers and error reporting.
+
+        :param method: HTTP method ('GET', 'POST', 'PATCH', 'DELETE', etc.)
+        :param endpoint: URL endpoint (relative path or full URL)
+        :param params: Optional URL query parameters
+        :param json: Optional JSON serializable body payload
+        :param expected_status: Accepted HTTP status code(s) for success (e.g. 200, 201, or (200, 201))
+        :param error_context: Description for the error message if the request fails
+        :return: requests.Response object if status matches expected, None on failure
+        """
+        url = endpoint if endpoint.startswith("http") else f"{self._BASE_URL}{endpoint}"
+        valid_statuses = (expected_status,) if isinstance(expected_status, int) else expected_status
+
+        r = requests.request(
+            method=method.upper(),
+            url=url,
+            headers=self._headers,
+            params=params,
+            json=json
+        )
+
+        if r.status_code not in valid_statuses:
+            print(f"Error {r.status_code} during {error_context}.\nResponse Body: {r.text}")
+            return None
+
+        return r
+
     def _convert_date(self, time_millisecond: str) -> date | None:
         if time_millisecond == "":
             return None
@@ -46,13 +84,9 @@ class HubspotPZ:
     ##########Properties############################################
 
     def _get_property_info(self, object_type: str, property_name: str) -> Any:
-        endpoint = self._BASE_URL + f'/crm/properties/{self._CRM_API_VERSION}/{object_type}/{property_name}'
-        r = requests.get(url=endpoint, headers=self._headers)
-        
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the retrieval of a property information on HubSpot.\nResponse Body: {r.text}")
-            return None
-        return r.json()
+        endpoint = f'/crm/properties/{self._CRM_API_VERSION}/{object_type}/{property_name}'
+        r = self._request("GET", endpoint, error_context="the retrieval of a property information on HubSpot")
+        return r.json() if r is not None else None
 
     def getContactPropertyInfo(self, property_name: str) -> Any:
         return self._get_property_info("contacts", property_name)
@@ -92,12 +126,11 @@ class HubspotPZ:
         if associations_objects is not None:
             params["associations"] = ",".join(associations_objects)
 
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
 
-        r = requests.get(url=endpoint, headers=self._headers, params=params)
+        r = self._request("GET", endpoint, params=params, error_context=f"the retrieval of all {object_type}")
 
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the retrieval of all contacts.\nResponse Body: {r.text}")
+        if r is None:
             return None
         
         for result in r.json().get("results", []):
@@ -138,14 +171,16 @@ class HubspotPZ:
         :param properties: Properties of the object to create
         :return: ID of the created object, or None on error
         """
-
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
-        r = requests.post(url=endpoint, headers=self._headers, json={ "properties": properties })
-        
-        if r.status_code != 201:
-            print(f"Error {r.status_code} during the creation of an object on HubSpot.\nResponse Body: {r.text}")
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
+        r = self._request(
+            "POST",
+            endpoint,
+            json={"properties": properties},
+            expected_status=201,
+            error_context="the creation of an object on HubSpot"
+        )
+        if r is None:
             return None
-        
         return r.json().get("id", None)  # Use .get to avoid KeyError if ID does not exist
 
     #Tested and working
@@ -162,15 +197,14 @@ class HubspotPZ:
         :param object_id: ID of the object to archive
         :return: True if successfully archived, False otherwise
         """
-
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
-        r = requests.delete(url=endpoint, headers=self._headers)
-        
-        if r.status_code != 204:
-            print(f"Error {r.status_code} during the archivation of an object on HubSpot.\nResponse Body: {r.text}")
-            return False
-        
-        return True
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
+        r = self._request(
+            "DELETE",
+            endpoint,
+            expected_status=204,
+            error_context="the archivation of an object on HubSpot"
+        )
+        return r is not None
     
     #Tested and working
     def _update_object(
@@ -188,15 +222,14 @@ class HubspotPZ:
         :param properties: Properties of the object to update
         :return: True if successfully updated, False otherwise
         """
-
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
-        r = requests.patch(url=endpoint, headers=self._headers, json={ "properties": properties })
-        
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the update of an object on HubSpot.\nResponse Body: {r.text}")
-            return False
-        
-        return True  # Use .get to avoid KeyError if ID does not exist
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
+        r = self._request(
+            "PATCH",
+            endpoint,
+            json={"properties": properties},
+            error_context="the update of an object on HubSpot"
+        )
+        return r is not None
     
     #Tested and working
     def _get_object(
@@ -229,11 +262,14 @@ class HubspotPZ:
         if associations_objects is not None:
             params["associations"] = ",".join(associations_objects)
 
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
-        r = requests.get(url=endpoint, headers=self._headers, params=params)
-        
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the retrieval of an object on HubSpot.\nResponse Body: {r.text}")
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
+        r = self._request(
+            "GET",
+            endpoint,
+            params=params,
+            error_context="the retrieval of an object on HubSpot"
+        )
+        if r is None:
             return None
         
         retrieved_properties = {prop: r.json().get("properties", {}).get(prop) or None for prop in properties_names}
@@ -257,21 +293,30 @@ class HubspotPZ:
         :param properties_names: Properties of the object to retrieve
         :return: Dictionary with requested object properties, or None on error
         """
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/search'
-        r = requests.post(url=endpoint, headers=self._headers,
-                         json={"properties": properties_names,
-                               "filterGroups":[
-                                   {"filters": [ 
-                                       {"propertyName": name, "operator": "EQ", "value": value } for name, value in search_params.items()
-                                       ]}]})
-        
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the search of an object on HubSpot.\nResponse Body: {r.text}")
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/search'
+        payload = {
+            "properties": properties_names,
+            "filterGroups": [
+                {
+                    "filters": [
+                        {"propertyName": name, "operator": "EQ", "value": value}
+                        for name, value in search_params.items()
+                    ]
+                }
+            ]
+        }
+        r = self._request(
+            "POST",
+            endpoint,
+            json=payload,
+            error_context="the search of an object on HubSpot"
+        )
+        if r is None:
             return None
         
         output = []
         for result in r.json().get("results", []):
-            retrieved_properties = {prop: result.get("properties").get(prop) for prop in properties_names}
+            retrieved_properties = {prop: (result.get("properties") or {}).get(prop) for prop in properties_names}
             retrieved_properties["id"] = result.get("id")
             output.append(retrieved_properties)
         return output
@@ -325,13 +370,9 @@ class HubspotPZ:
         return self._create_object("deals", properties)
     
     def getPipelineInfo(self, object_type: str, pipeline_id: str) -> Any:
-        endpoint = self._BASE_URL + f'/crm/pipelines/{self._CRM_API_VERSION}/{object_type}/{pipeline_id}'
-        r = requests.get(url=endpoint, headers=self._headers)
-        
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the retrieval of a pipeline information on HubSpot.\nResponse Body: {r.text}")
-            return None
-        return r.json()
+        endpoint = f'/crm/pipelines/{self._CRM_API_VERSION}/{object_type}/{pipeline_id}'
+        r = self._request("GET", endpoint, error_context="the retrieval of a pipeline information on HubSpot")
+        return r.json() if r is not None else None
     
     ##########Objects Batch############################################
 
@@ -363,16 +404,16 @@ class HubspotPZ:
         batch = properties_list[:self._MAX_BATCH_SIZE]
         remaining = properties_list[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/create'
-        r = requests.post(url=endpoint,
-                          headers=self._headers,
-                          json={ "inputs": [{"properties": properties} for properties in batch] })
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/create'
+        r = self._request(
+            "POST",
+            endpoint,
+            json={"inputs": [{"properties": properties} for properties in batch]},
+            expected_status=(200, 201),
+            error_context="the creation of a batch of objects on HubSpot"
+        )
 
-        if r.status_code not in (200, 201):
-            # Status code 207 is multi-status (some objects may have succeeded and others failed)
-            print(f"Error {r.status_code} during the creation of a batch of objects on HubSpot.\nResponse Body: {r.text}")
-            # return None
-        else:
+        if r is not None:
             results = r.json().get("results", [])
             accumulated_ids.extend([result.get("id") for result in results if result.get("id")])
         
@@ -400,13 +441,15 @@ class HubspotPZ:
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
         
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/archive'
-        r = requests.post(url=endpoint,
-                          headers=self._headers,
-                          json={ "inputs": [{"id": id} for id in batch] })
-
-        if r.status_code not in (200, 204):
-            print(f"Error {r.status_code} during the archivation of a batch of objects on HubSpot.\nResponse Body: {r.text}")
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/archive'
+        r = self._request(
+            "POST",
+            endpoint,
+            json={"inputs": [{"id": id} for id in batch]},
+            expected_status=(200, 204),
+            error_context="the archivation of a batch of objects on HubSpot"
+        )
+        if r is None:
             return False
         
         return self._archive_object_batch(object_type, remaining)
@@ -433,14 +476,14 @@ class HubspotPZ:
         batch = dict(list(id_to_properties_list.items())[:self._MAX_BATCH_SIZE]) # First MAX_BATCH_SIZE elements
         remaining = dict(list(id_to_properties_list.items())[self._MAX_BATCH_SIZE:]) # Remaining elements
         
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/update'
-        r = requests.post(url=endpoint,
-                          headers=self._headers,
-                          json={ "inputs": [{"id": id, "properties": properties} for id, properties in batch.items()] })
-
-        if r.status_code != 200:
-            # Status code 207 is multi-status (some objects may have succeeded and others failed)
-            print(f"Error {r.status_code} during the update of a batch of objects on HubSpot.\nResponse Body: {r.text}")
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/update'
+        r = self._request(
+            "POST",
+            endpoint,
+            json={"inputs": [{"id": id, "properties": properties} for id, properties in batch.items()]},
+            error_context="the update of a batch of objects on HubSpot"
+        )
+        if r is None:
             return False
         
         return self._update_object_batch(object_type, remaining)
@@ -474,13 +517,15 @@ class HubspotPZ:
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/read'
-        r = requests.post(url=endpoint,
-                          headers=self._headers,
-                          json={ "inputs": [{"id": id} for id in batch], "properties": properties_names })
-
-        if r.status_code not in (200, 207):
-            print(f"Error {r.status_code} during the retrieval of a batch of objects on HubSpot.\nResponse Body: {r.text}")
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/read'
+        r = self._request(
+            "POST",
+            endpoint,
+            json={"inputs": [{"id": id} for id in batch], "properties": properties_names},
+            expected_status=(200, 207),
+            error_context="the retrieval of a batch of objects on HubSpot"
+        )
+        if r is None:
             return None
         
         output = []
@@ -545,12 +590,14 @@ class HubspotPZ:
         if after:
             params["after"] = after
 
-        endpoint = self._BASE_URL + f'/crm/lists/{self._CRM_API_VERSION}/{list_id}/memberships'
-
-        r = requests.get(url=endpoint, headers=self._headers, params=params)
-
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the retrieval of the members of a list.\nResponse Body: {r.text}")
+        endpoint = f'/crm/lists/{self._CRM_API_VERSION}/{list_id}/memberships'
+        r = self._request(
+            "GET",
+            endpoint,
+            params=params,
+            error_context="the retrieval of the members of a list"
+        )
+        if r is None:
             return None
         
         ids = [result.get("recordId") for result in r.json().get("results", []) if "recordId" in result]
@@ -584,11 +631,13 @@ class HubspotPZ:
         :return: List of associated object IDs, or None on error
         """
 
-        endpoint = self._BASE_URL + f"/crm/objects/{self._CRM_API_VERSION}/{from_object_type}/{from_object_id}/associations/{to_object_type}"
-
-        r = requests.get(url=endpoint, headers=self._headers)
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the retrieval of associations between objects.\nResponse Body: {r.text}")
+        endpoint = f"/crm/objects/{self._CRM_API_VERSION}/{from_object_type}/{from_object_id}/associations/{to_object_type}"
+        r = self._request(
+            "GET",
+            endpoint,
+            error_context="the retrieval of associations between objects"
+        )
+        if r is None:
             return None
 
         toIds = []
@@ -636,17 +685,20 @@ class HubspotPZ:
         batch = from_object_ids[:self._MAX_BATCH_SIZE]
         remaining = from_object_ids[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASE_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
+        endpoint = f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
         
         for toId in batch:
             # Add key if not present (with empty list default)
             accumulated_associations.setdefault(toId, [])
         
-        # Prepare request payload
-        r = requests.post(url=endpoint, headers=self._headers, json={ "inputs": [{"id": id} for id in batch] })
-
-        if r.status_code != 200 and r.status_code != 207:
-            print(f"Error {r.status_code} during the retrieval in batch of associations between objects.\nResponse Body: {r.text}")
+        r = self._request(
+            "POST",
+            endpoint,
+            json={"inputs": [{"id": id} for id in batch]},
+            expected_status=(200, 207),
+            error_context="the retrieval in batch of associations between objects"
+        )
+        if r is None:
             return None
         
         for result in r.json().get("results", []):
@@ -679,30 +731,31 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASE_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
+        endpoint = f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
 
-        r = requests.post(
-            url = endpoint,
-            headers = self._headers,
-            json = {
-                "inputs": [
-                    {
-                        "from": {"id": fromId},
-                        "to": {"id": toId},
-                        "types": [{
-                            "associationCategory": "HUBSPOT_DEFINED",
-                            "associationTypeId": associationTypeId
-                        }]
-                    } for fromId, toId in batch
-                ]
-            }
+        payload = {
+            "inputs": [
+                {
+                    "from": {"id": fromId},
+                    "to": {"id": toId},
+                    "types": [{
+                        "associationCategory": "HUBSPOT_DEFINED",
+                        "associationTypeId": associationTypeId
+                    }]
+                } for fromId, toId in batch
+            ]
+        }
+        r = self._request(
+            "POST",
+            endpoint,
+            json=payload,
+            expected_status=(200, 201),
+            error_context="the creation in batch of associations between objects"
         )
-
-        if r.status_code not in (200, 201):
-            print(f"Error {r.status_code} during the creation in batch of associations between objects.\nResponse Body: {r.text}")
+        if r is None:
             return False
         
         return self._create_object_associations_batch(from_object_type, to_object_type, associationTypeId, remaining)
@@ -727,7 +780,7 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASE_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
+        endpoint = f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
@@ -739,10 +792,14 @@ class HubspotPZ:
                 "to": [{"id": str(to_id)}]
             })
 
-        r = requests.post(url=endpoint, headers=self._headers, json={"inputs": inputs})
-
-        if r.status_code not in (200, 204):
-            print(f"Error {r.status_code} during the archivation in batch of associations between objects.\nResponse Body: {r.text}")
+        r = self._request(
+            "POST",
+            endpoint,
+            json={"inputs": inputs},
+            expected_status=(200, 204),
+            error_context="the archivation in batch of associations between objects"
+        )
+        if r is None:
             return False
         
         return self._archive_object_associations_batch(from_object_type, to_object_type, remaining)
@@ -786,15 +843,15 @@ class HubspotPZ:
         :return: True if merged successfully, False otherwise
         """
 
-        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/merge'
-
-        r = requests.post(url=endpoint, headers=self._headers, json={ "objectIdToMerge": object_to_merge_id, "primaryObjectId": main_object_id })
-
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the merge of objects {object_type} on HubSpot.\nResponse Body: {r.text}")
-            return False
-        
-        return True
+        endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/merge'
+        payload = {"objectIdToMerge": object_to_merge_id, "primaryObjectId": main_object_id}
+        r = self._request(
+            "POST",
+            endpoint,
+            json=payload,
+            error_context=f"the merge of objects {object_type} on HubSpot"
+        )
+        return r is not None
     
     def mergeCompanies(self, main_company_id: str, company_to_merge_id: str) -> bool:
         return self._merge_objects("companies", main_company_id, company_to_merge_id)
@@ -814,16 +871,16 @@ class HubspotPZ:
         :return: Signed URL of the file, or None on error
         """
 
-        endpoint = self._BASE_URL + f'/files/{self._CRM_API_VERSION}/files/{file_id}/signed-url'
+        endpoint = f'/files/{self._CRM_API_VERSION}/files/{file_id}/signed-url'
 
         params: dict[str, Any] = {}
         if expiration_seconds is not None:
             params["expirationSeconds"] = expiration_seconds
 
-        r = requests.get(url=endpoint, headers=self._headers, params=params)
-
-        if r.status_code != 200:
-            print(f"Error {r.status_code} during the retrieval of the signed URL of a file on HubSpot.\nResponse Body: {r.text}")
-            return None
-        
-        return r.json()
+        r = self._request(
+            "GET",
+            endpoint,
+            params=params,
+            error_context="the retrieval of the signed URL of a file on HubSpot"
+        )
+        return r.json() if r is not None else None
