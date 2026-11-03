@@ -38,7 +38,7 @@ class HubspotPZ:
         if time_millisecond == "":
             return None
         millisecond = int(time_millisecond)
-        timestamp = millisecond / 1000  # Converti millisecondi in secondi dividendo per 1000
+        timestamp = millisecond / 1000  # Convert milliseconds to seconds by dividing by 1000
         data = datetime.fromtimestamp(timestamp)
         return data.date()
 
@@ -71,13 +71,14 @@ class HubspotPZ:
         after: str | None = None
     ) -> list[dict[str, str]]:
         """
-        Funzione generica per ottenere tutti gli oggetti di un certo tipo (contatti, aziende, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to retrieve all objects of a given type (contacts, companies, etc.) from HubSpot.
+        API Version V3.
         
-        :param object_type: Tipi degli oggetti (ad esempio 'contacts' o 'companies')
-        :param properties_names: Lista di proprietà da ottenere per ogni oggetto
-        :param accumulated_objects: Lista di oggetti accumulati durante le chiamate ricorsive
-        :return: Lista degli oggetti richiesti
+        :param object_type: Type of objects (e.g. 'contacts' or 'companies')
+        :param properties_names: List of property names to retrieve for each object
+        :param accumulated_objects: List of accumulated objects during recursive calls
+        :param after: Pagination cursor for the next page
+        :return: List of requested objects
         """
         if accumulated_objects is None:
             accumulated_objects = []
@@ -128,12 +129,12 @@ class HubspotPZ:
         properties: dict[str, str]
     ) -> str | None:
         """
-        Funzione generica per creare un oggetto (contatto, azienda, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to create an object (contact, company, etc.) on HubSpot.
+        API Version V3.
         
-        :param object_type: Tipo dell'oggetto (ad esempio 'contacts' o 'companies')
-        :param kwargs: Proprietà dell'oggetto da creare
-        :return: ID dell'oggetto creato, oppure None in caso di errore
+        :param object_type: Type of object (e.g. 'contacts' or 'companies')
+        :param properties: Properties of the object to create
+        :return: ID of the created object, or None on error
         """
 
         endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}'
@@ -143,7 +144,7 @@ class HubspotPZ:
             print(f"Error {r.status_code} during the creation of an object on HubSpot.\nResponse Body: {r.text}")
             return None
         
-        return r.json().get("id", None)  # Usa .get per evitare KeyError se l'ID non esiste
+        return r.json().get("id", None)  # Use .get to avoid KeyError if ID does not exist
 
     #Tested and working
     def _archive_object(
@@ -152,12 +153,12 @@ class HubspotPZ:
         object_id: str
     ) -> bool:
         """
-        Funzione generica per archiviare un oggetto (contatto, azienda, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to archive an object (contact, company, etc.) on HubSpot.
+        API Version V3.
         
-        :param object_type: Tipo dell'oggetto (ad esempio 'contacts' o 'companies')
-        :param object_id: ID dell'oggetto da archiviare
-        :return: True se archiviato correttamente, False altrimenti
+        :param object_type: Type of object (e.g. 'contacts' or 'companies')
+        :param object_id: ID of the object to archive
+        :return: True if successfully archived, False otherwise
         """
 
         endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/{object_id}'
@@ -177,13 +178,13 @@ class HubspotPZ:
         properties: dict[str, str]
     ) -> bool:
         """
-        Funzione generica per aggiornare un oggetto (contatto, azienda, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to update an object (contact, company, etc.) on HubSpot.
+        API Version V3.
         
-        :param object_type: Tipo dell'oggetto (ad esempio 'contacts' o 'companies')
-        :param object_id: ID dell'oggetto da aggiornare
-        :param kwargs: Proprietà dell'oggetto da aggiornare
-        :return: True se aggiornato correttamente, False altrimenti
+        :param object_type: Type of object (e.g. 'contacts' or 'companies')
+        :param object_id: ID of the object to update
+        :param properties: Properties of the object to update
+        :return: True if successfully updated, False otherwise
         """
 
         endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/{object_id}'
@@ -193,7 +194,7 @@ class HubspotPZ:
             print(f"Error {r.status_code} during the update of an object on HubSpot.\nResponse Body: {r.text}")
             return False
         
-        return True  # Usa .get per evitare KeyError se l'ID non esiste
+        return True  # Use .get to avoid KeyError if ID does not exist
     
     #Tested and working
     def _get_object(
@@ -205,13 +206,15 @@ class HubspotPZ:
         associations_objects: list[str] | None = None,
     ) -> dict[str, str] | None:
         """
-        Funzione generica per ottenere un oggetto (contatto, azienda, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to retrieve an object (contact, company, etc.) from HubSpot.
+        API Version V3.
         
-        :param object_type: Tipo dell'oggetto (ad esempio 'contacts' o 'companies')
-        :param object_id: ID dell'oggetto da ottenere (l'identificatore può essere qualsiasi campo univoco, come l'email, si passa il nome del campo in identifying_property)
-        :param properties_names: Proprietà dell'oggetto da ottenere
-        :return: Un dizionario con le proprietà dell'oggetto richieste, oppure None in caso di errore
+        :param object_type: Type of object (e.g. 'contacts' or 'companies')
+        :param object_id: ID of the object to retrieve (can be any unique field, like email, passed in identifying_property)
+        :param properties_names: Properties of the object to retrieve
+        :param identifying_property: Identifying property name (default 'id')
+        :param associations_objects: Associated objects to retrieve
+        :return: Dictionary with requested object properties, or None on error
         """
         if properties_names is None:
             properties_names = []
@@ -229,7 +232,7 @@ class HubspotPZ:
         r = requests.get(url=endpoint, headers=self._headers)
         
         if r.status_code != 200:
-            print(f"Error {r.status_code} during the update of an object on HubSpot.\nResponse Body: {r.text}")
+            print(f"Error {r.status_code} during the retrieval of an object on HubSpot.\nResponse Body: {r.text}")
             return None
         
         retrieved_properties = {prop: r.json().get("properties", {}).get(prop) or None for prop in properties_names}
@@ -245,13 +248,13 @@ class HubspotPZ:
         properties_names: list[str]
     ) -> dict[str, str] | None:
         """
-        Funzione generica per cercare un oggetto (contatto, azienda, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to search for an object (contact, company, etc.) on HubSpot.
+        API Version V3.
         
-        :param object_type: Tipo dell'oggetto (ad esempio 'contacts' o 'companies')
-        :search_params: Le proprietà con i valori su cui filtrare la ricerca
-        :param properties_names: Proprietà dell'oggetto da ottenere
-        :return: Un dizionario con le proprietà dell'oggetto richieste, oppure None in caso di errore
+        :param object_type: Type of object (e.g. 'contacts' or 'companies')
+        :param search_params: Properties and values to filter the search by
+        :param properties_names: Properties of the object to retrieve
+        :return: Dictionary with requested object properties, or None on error
         """
         endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/search'
         r = requests.post(url=endpoint, headers=self._headers,
@@ -336,24 +339,24 @@ class HubspotPZ:
         accumulated_ids: list[str] | None = None
     ) -> list[str] | None:
         """
-        Funzione generica per creare un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
-        Versione API V3.
-        In questa prima implementazione non sto gestendo le associazioni, batch create di SOLO oggetti senza relazioni
+        Generic function to batch create objects (contacts, companies, etc.) on HubSpot.
+        API Version V3.
+        In this implementation associations are not handled (batch creation of objects only, without relations).
         
-        :param object_type: Tipi dell'oggetto (ad esempio 'contacts' o 'companies')
-        :param properties_list: Lista di proprietà
-        :param accumulated_ids: Lista di ID accumulati durante le chiamate ricorsive
-        :return: Lista di ID degli oggetti creati, oppure None in caso di errore
+        :param object_type: Type of object (e.g. 'contacts' or 'companies')
+        :param properties_list: List of property dictionaries
+        :param accumulated_ids: List of accumulated IDs during recursive calls
+        :return: List of created object IDs, or None on error
         """
 
         if accumulated_ids is None:
             accumulated_ids = []
 
-        # Caso ricorsivo base: se la lista è vuota, restituisci gli ID accumulati
+        # Base recursive case: if the list is empty, return accumulated IDs
         if not properties_list:
             return accumulated_ids if accumulated_ids else None
 
-        # Prendi il massimo numero di elementi
+        # Take up to the maximum batch size
         batch = properties_list[:self._MAX_BATCH_SIZE]
         remaining = properties_list[self._MAX_BATCH_SIZE:]
 
@@ -363,7 +366,7 @@ class HubspotPZ:
                           json={ "inputs": [{"properties": properties} for properties in batch] })
 
         if r.status_code != 201:
-            #Status code 207 è un codice strano, multi-status. Credo significhi che qualche oggetto ha dato errore e qualche no
+            # Status code 207 is multi-status (some objects may have succeeded and others failed)
             print(f"Error {r.status_code} during the creation of a batch of objects on HubSpot.\nResponse Body: {r.text}")
             # return None
         else:
@@ -378,19 +381,19 @@ class HubspotPZ:
         id_list: list[str]
     ) -> bool:
         """
-        Funzione generica per archiviare un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to batch archive objects (contacts, companies, etc.) on HubSpot.
+        API Version V3.
         
-        :param object_type: Tipo degli oggetti (ad esempio 'contacts' o 'companies')
-        :param id_list: Lista di id da archiviare
-        :return: True se archiviati correttamente, False altrimenti
+        :param object_type: Type of objects (e.g. 'contacts' or 'companies')
+        :param id_list: List of IDs to archive
+        :return: True if successfully archived, False otherwise
         """
 
-        # Caso ricorsivo base: se la lista è vuota, restituisci True
+        # Base recursive case: if the list is empty, return True
         if not id_list:
             return True
 
-        # Prendi il massimo numero di elementi
+        # Take up to the maximum batch size
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
         
@@ -411,21 +414,21 @@ class HubspotPZ:
         id_to_properties_list: dict[str, dict[str, str]]
     ) -> bool:
         """
-        Funzione generica per aggiornare un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to batch update objects (contacts, companies, etc.) on HubSpot.
+        API Version V3.
         
-        :param object_type: Tipi dell'oggetto (ad esempio 'contacts' o 'companies')
-        :param id_to_properties_list: Dizionario che mappa ID degli oggetti al dizionario di proprietà da aggiornare
-        :return: True se aggiornato correttamente, False altrimenti
+        :param object_type: Type of object (e.g. 'contacts' or 'companies')
+        :param id_to_properties_list: Dictionary mapping object IDs to property dictionaries to update
+        :return: True if successfully updated, False otherwise
         """
 
-        # Caso ricorsivo base: se il dizionario è vuoto, restituisci True
+        # Base recursive case: if dictionary is empty, return True
         if not id_to_properties_list:
             return True
         
-        # Prendi il massimo numero di elementi
-        batch = dict(list(id_to_properties_list.items())[:self._MAX_BATCH_SIZE]) #Primi MAX_BATCH_SIZE elementi
-        remaining = dict(list(id_to_properties_list.items())[self._MAX_BATCH_SIZE:]) #Elementi rimanenti
+        # Take up to the maximum batch size
+        batch = dict(list(id_to_properties_list.items())[:self._MAX_BATCH_SIZE]) # First MAX_BATCH_SIZE elements
+        remaining = dict(list(id_to_properties_list.items())[self._MAX_BATCH_SIZE:]) # Remaining elements
         
         endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/batch/update'
         r = requests.post(url=endpoint,
@@ -433,7 +436,7 @@ class HubspotPZ:
                           json={ "inputs": [{"id": id, "properties": properties} for id, properties in batch.items()] })
 
         if r.status_code != 200:
-            #Status code 207 è un codice strano, multi-status. Credo significhi che qualche oggetto ha dato errore e qualche no
+            # Status code 207 is multi-status (some objects may have succeeded and others failed)
             print(f"Error {r.status_code} during the update of a batch of objects on HubSpot.\nResponse Body: {r.text}")
             return False
         
@@ -447,23 +450,24 @@ class HubspotPZ:
         accumulated_objects: list[dict[str, str]] | None = None
     ) -> list[dict[str, str]] | None:
         """
-        Funzione generica per ottenere un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
-        Versione API V3.
+        Generic function to batch retrieve objects (contacts, companies, etc.) from HubSpot.
+        API Version V3.
         
-        :param object_type: Tipo degli oggetti (ad esempio 'contacts' o 'companies')
-        :param id_list: Lista di id da ottenere
-        :properties_names: Lista di proprietà da ottenere
-        :return: Lista di dizionari con le proprietà degli oggetti richiesti, oppure None in caso di errore
+        :param object_type: Type of objects (e.g. 'contacts' or 'companies')
+        :param id_list: List of IDs to retrieve
+        :param properties_names: List of property names to retrieve
+        :param accumulated_objects: Accumulated objects during recursive calls
+        :return: List of dictionaries with requested properties, or None on error
         """
 
         if accumulated_objects is None:
             accumulated_objects = []
 
-        # Caso ricorsivo base: se la lista è vuota, restituisci gli oggetti accumulati
+        # Base recursive case: if the list is empty, return accumulated objects
         if not id_list:
             return accumulated_objects if accumulated_objects else None
         
-        # Prendi il massimo numero di elementi
+        # Take up to the maximum batch size
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
 
@@ -520,12 +524,13 @@ class HubspotPZ:
         after: str | None = None
     ) -> list[str] | None:
         """
-        Funzione generica per ottenere i contatti facenti parte di una lista su HubSpot.
-        Versione API V3.
+        Generic function to retrieve contact IDs belonging to a list on HubSpot.
+        API Version V3.
         
-        :param list_id: ID della lista da cui ottenere i membri
-        :properties_names: Lista di proprietà da ottenere per ogni membro
-        :return: Lista di id dei membri del gruppo, oppure None in caso di errore
+        :param list_id: ID of the list to retrieve members from
+        :param accumulated_ids: Accumulated IDs during recursive calls
+        :param after: Pagination cursor for the next page
+        :return: List of member IDs, or None on error
         """
         if accumulated_ids is None:
             accumulated_ids = []
@@ -561,14 +566,14 @@ class HubspotPZ:
         from_object_id: str
     ) -> list[str] | None:
         """
-        Funzione generica per ottenere le associazioni di un oggetto su HubSpot.
-        Non ho implementato le chiamate ricorsive in quanto, essendo il limite a 500 associazioni, non dovrebbe mai essere necessario.
-        Versione API V4.
+        Generic function to retrieve associations of an object on HubSpot.
+        Recursive calls are not implemented as associations are capped at 500.
+        API Version V4.
 
-        :param from_object_type: Tipo dell'oggetto di partenza
-        :param to_object_type: Tipo dell'oggetto di arrivo
-        :param from_object_id: ID dell'oggetto di partenza
-        :return: Lista di ID degli oggetti associati, oppure None in caso di errore
+        :param from_object_type: Source object type
+        :param to_object_type: Target object type
+        :param from_object_id: Source object ID
+        :return: List of associated object IDs, or None on error
         """
 
         endpoint = self._BASER_URL + f"/crm/v4/objects/{from_object_type}/{from_object_id}/associations/{to_object_type}"
@@ -597,33 +602,34 @@ class HubspotPZ:
         accumulated_associations: dict[str, list[str]] | None = None
     ) -> dict[str, list[str]] | None:
         """
-        Funzione generica per ottenere le associazioni di molteplici oggetti su HubSpot.
-        Versione API V4.
+        Generic function to batch retrieve associations for multiple objects on HubSpot.
+        API Version V4.
 
-        :param from_object_type: Tipo dell'oggetto di partenza
-        :param to_object_type: Tipo dell'oggetto di arrivo
-        :param from_object_id: Lista degli ID degli oggetti di partenza
-        :return: Mappa di ID degli oggetti di partenza a liste di ID degli oggetti associati, oppure None in caso di errore
+        :param from_object_type: Source object type
+        :param to_object_type: Target object type
+        :param from_object_ids: List of source object IDs
+        :param accumulated_associations: Accumulated associations mapping
+        :return: Mapping of source object IDs to lists of associated IDs, or None on error
         """
 
         if accumulated_associations is None:
             accumulated_associations = {}
 
-        # Caso ricorsivo base: se la lista è vuota, restituisci gli oggetti accumulati
+        # Base recursive case: if the list is empty, return accumulated associations
         if not from_object_ids:
             return accumulated_associations if accumulated_associations else None
         
-        # Prendi il massimo numero di elementi
+        # Take up to the maximum batch size
         batch = from_object_ids[:self._MAX_BATCH_SIZE]
         remaining = from_object_ids[self._MAX_BATCH_SIZE:]
 
         endpoint = self._BASER_URL + f"/crm/v4/associations/{from_object_type}/{to_object_type}/batch/read"
         
         for toId in batch:
-            #aggiungi la chiave se non presente (con valore lista vuota)
+            # Add key if not present (with empty list default)
             accumulated_associations.setdefault(toId, [])
         
-        # Prepara il payload per la richiesta
+        # Prepare request payload
         r = requests.post(url=endpoint, headers=self._headers, json={ "inputs": [{"id": id} for id in batch] })
 
         if r.status_code != 200 and r.status_code != 207:
@@ -646,17 +652,17 @@ class HubspotPZ:
     ) -> bool:
         
         """
-        Funzione generica per creare le associazioni di molteplici oggetti su HubSpot.
-        Versione API V4.
+        Generic function to batch create associations between multiple objects on HubSpot.
+        API Version V4.
 
-        :param from_object_type: Tipo degli oggetti di partenza
-        :param to_object_type: Tipo degli oggetto di arrivo
-        :param associationTypeId: ID del tipo di associazione da creare
-        :param associations: Lista di tuple (toId, fromId) che rappresentano le associazioni da creare
-        :return: True se tutto è andato a buon fine, False altrimenti
+        :param from_object_type: Source object type
+        :param to_object_type: Target object type
+        :param associationTypeId: ID of the association type to create
+        :param associations: List of tuples (fromId, toId) representing associations to create
+        :return: True if successful, False otherwise
         """
 
-        # Caso ricorsivo base: se la lista è vuota, restituisci True
+        # Base recursive case: if the list is empty, return True
         if not associations:
             return True
 
@@ -695,16 +701,16 @@ class HubspotPZ:
         associations: list[tuple[str, list[str]]]
     ) -> bool:
         """
-        Funzione generica per archiviare le associazioni di molteplici oggetti su HubSpot.
-        Versione API V4.
+        Generic function to batch archive associations between multiple objects on HubSpot.
+        API Version V4.
 
-        :param from_object_type: Tipo degli oggetti di partenza
-        :param to_object_type: Tipo degli oggetto di arrivo
-        :param associations: Lista di tuple di (toId, fromIds) che rappresentano le associazioni da archiviare
-        :return: True se tutto è andato a buon fine, False altrimenti
+        :param from_object_type: Source object type
+        :param to_object_type: Target object type
+        :param associations: List of tuples (toId, fromIds) representing associations to archive
+        :return: True if successful, False otherwise
         """
 
-        # Caso ricorsivo base: se la lista è vuota, restituisci True
+        # Base recursive case: if the list is empty, return True
         if not associations:
             return True
 
@@ -751,12 +757,13 @@ class HubspotPZ:
         object_to_merge_id: str
     ) -> bool:
         """
-        Funzione per unire due aziende su HubSpot.
-        Versione API V3.
+        Function to merge two objects on HubSpot.
+        API Version V3.
         
-        :param main_company_id: ID dell'azienda principale
-        :param company_to_merge_id: ID dell'azienda da unire
-        :return: True se unite correttamente, False altrimenti
+        :param object_type: Type of object (e.g. 'companies' or 'contacts')
+        :param main_object_id: ID of the primary object
+        :param object_to_merge_id: ID of the object to merge into primary object
+        :return: True if merged successfully, False otherwise
         """
 
         endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/merge'
@@ -779,11 +786,11 @@ class HubspotPZ:
 
     def get_file_signed_url(self, file_id: str) -> Any | None:
         """
-        Funzione per ottenere l'URL firmato di un file su HubSpot.
-        Versione API V3.
+        Function to retrieve a signed URL of a file on HubSpot.
+        API Version V3.
         
-        :param file_id: ID del file da ottenere
-        :return: URL firmato del file, oppure None in caso di errore
+        :param file_id: ID of the file to retrieve
+        :return: Signed URL of the file, or None on error
         """
 
         endpoint = self._BASER_URL + f'/files/v3/files/{file_id}/signed-url'
