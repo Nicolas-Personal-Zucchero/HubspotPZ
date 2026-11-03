@@ -205,47 +205,127 @@ def main() -> None:
     #     {"email": "merge_test_2@example.com", "firstname": "Firstname2", "lastname": "Lastname2"}
     # ])
     # print(f"Batch Contacts Created IDs: {merge_contact_ids}")
-    # merged_contact = client.mergeContacts(main_contact_id=merge_contact_ids[0], contact_to_merge_id=merge_contact_ids[1])
-    # print(f"Contacts Merge Result: {merged_contact}")
+    # if merge_contact_ids and len(merge_contact_ids) >= 2:
+    #     batch_read = client.getContactBatch(merge_contact_ids, ["email", "firstname", "lastname"])
+    #     pretty_print("Batch Read Contacts", batch_read)
+
+    #     merged_contact = client.mergeContacts(main_contact_id=merge_contact_ids[0], contact_to_merge_id=merge_contact_ids[1])
+    #     print(f"Contacts Merge Result: {merged_contact}")
+
+    # print("\n--- Testing Merge Companies ---")
+    # merge_comp_ids = client.createCompanyBatch([
+    #     {"name": "Merge Test Company 1", "city": "Bologna"},
+    #     {"name": "Merge Test Company 2", "city": "Bologna"}
+    # ])
+    # print(f"Batch Companies Created IDs: {merge_comp_ids}")
+    # if merge_comp_ids and len(merge_comp_ids) >= 2:
+    #     batch_read_companies = client.getCompanyBatch(merge_comp_ids, ["name", "city"])
+    #     pretty_print("Batch Read Companies", batch_read_companies)
+
+    #     merged_company = client.mergeCompanies(main_company_id=merge_comp_ids[0], company_to_merge_id=merge_comp_ids[1])
+    #     print(f"Companies Merge Result: {merged_company}")
 
     # -------------------------------------------------------------
     # 9. ASSOCIATIONS (2026-09)
     # -------------------------------------------------------------
 
-    # TESTED: Batch Read Associations (Contacts -> Contacts)
+    # TESTED
     # print("\n--- Testing Batch Read Associations (Contacts -> Contacts) ---")
     # associated_contacts = client.getContactsAssociatedContactsBatch([NICOLAS_1_CONTACT_ID, NICOLAS_2_CONTACT_ID])
     # pretty_print("Contacts -> Contacts Associations", associated_contacts)
 
-    # TESTED: Batch Read Associations (Contacts -> Companies)
+    # TESTED
     # print("\n--- Testing Batch Read Associations (Contacts -> Companies) ---")
     # associated_companies = client.getContactsAssociatedCompaniesBatch([NICOLAS_1_CONTACT_ID, NICOLAS_2_CONTACT_ID])
     # pretty_print("Contacts -> Companies Associations", associated_companies)
 
-    # TESTED: Batch Read Associations (Companies -> Contacts)
+    # TESTED
     # print("\n--- Testing Batch Read Associations (Companies -> Contacts) ---")
     # associated_contacts = client.getCompaniesAssociatedContactsBatch([PZ_COMPANY_ID])
     # pretty_print("Companies -> Contacts Associations", associated_contacts)
 
-    # TESTED: Batch Create Associations (Contacts -> Contacts, type 449)
+    # TESTED
     # print("\n--- Testing Batch Create Associations (Contacts -> Contacts) ---")
     # contact_assoc_created = client.createContactsAssociatedContactsBatch([(NICOLAS_1_CONTACT_ID, NICOLAS_2_CONTACT_ID)])
     # print(f"Contacts -> Contacts Association Created: {contact_assoc_created}")
 
-    # TESTED: Batch Create Associations (Deals -> Contacts, type 3)
+    # TESTED
     # print("\n--- Testing Batch Create Associations (Deals -> Contacts) ---")
     # deal_assoc_created = client.createContactsAssociatedDealsBatch([(AMADORI_DEAL_ID, NICOLAS_1_CONTACT_ID), (AMADORI_DEAL_ID, NICOLAS_2_CONTACT_ID)])
     # print(f"Deals -> Contacts Association Created: {deal_assoc_created}")
 
-    # TESTED: Batch Create Associations (Contacts -> Companies, type 1)
+    # TESTED
     # print("\n--- Testing Batch Create Associations (Contacts -> Companies) ---")
     # company_assoc_created = client.createContactsAssociatedCompaniesBatch([(NICOLAS_1_CONTACT_ID, PZ_COMPANY_ID), (NICOLAS_2_CONTACT_ID, PZ_COMPANY_ID)])
     # print(f"Contacts -> Companies Association Created: {company_assoc_created}")
 
-    # TESTED: Single Object Association Read (Contact -> Companies)
+    # TESTED
     # print("\n--- Testing Single Object Associations Read (Contact -> Companies) ---")
     # associated_companies = client.getContactAssociatedCompanies(NICOLAS_1_CONTACT_ID)
     # pretty_print("Contact -> Companies IDs", associated_companies)
+
+    # TESTED
+    # print("\n--- Testing Single Object Association Read (Company -> Contacts) ---")
+    # associated_contacts = client.getCompanyAssociatedContacts(PZ_COMPANY_ID)
+    # pretty_print("Company -> Contacts IDs", associated_contacts)
+
+    # TESTED
+    # print("\n--- Testing Batch Archive Associations (Contacts -> Companies) ---")
+    # assoc_archived = client.archiveContactsAssociatedCompaniesBatch([(NICOLAS_2_CONTACT_ID, PZ_COMPANY_ID)])
+    # print(f"Contacts -> Companies Association Archived: {assoc_archived}")
+
+    # -------------------------------------------------------------
+    # 11. PIPELINE METADATA (2026-09) -> TESTED
+    # -------------------------------------------------------------
+    # print("\n--- Testing Get Pipeline Info: Contact Pipeline ---")
+    # contact_pipeline_info = client.getPipelineInfo("deals", client._CONTACT_PIPELINE_ID)
+    # pretty_print("Contact Pipeline Info", contact_pipeline_info)
+
+    # print("\n--- Testing Get Pipeline Info: Agent Pipeline ---")
+    # agent_pipeline_info = client.getPipelineInfo("deals", client._AGENT_PIPELINE_ID)
+    # pretty_print("Agent Pipeline Info", agent_pipeline_info)
+
+    # -------------------------------------------------------------
+    # 12. DEALS & DEAL CREATION (2026-09) -> TESTED
+    # -------------------------------------------------------------
+    # print("\n--- Testing Get All Deals (first 3) ---")
+    # deals = client.getAllDeals(["dealname", "dealstage", "amount", "pipeline"])
+    # print("Total Deals:", len(deals) if deals else 0)
+    # pretty_print("Deals (first 3)", deals[:3] if deals else [])
+
+    # print("\n--- Testing Create Contact Deal ---")
+    # new_contact_deal_id = client.createContactDeal({
+    #     "dealname": "Playground Test Contact Deal",
+    #     "nome_cliente": "Nome Cliente",
+    #     "rivenditore": True,
+    #     "dealstage": 145328888,
+    # })
+    # print(f"Created Contact Deal ID: {new_contact_deal_id}")
+
+    # print("\n--- Testing Create Agent Deal ---")
+    # new_agent_deal_id = client.createAgentDeal({
+    #     "dealname": "Playground Test Agent Deal",
+    #     "nome_cliente": "N/A", # Required (create form rule) but not needed for agent deals
+    #     "rivenditore": False, # Required (create form rule) but not needed for agent deals
+    #     "dealstage": "3288687860",
+    # })
+    # print(f"Created Agent Deal ID: {new_agent_deal_id}")
+
+    # -------------------------------------------------------------
+    # 13. LISTS & MEMBERSHIPS (2026-09) -> TESTED
+    # -------------------------------------------------------------
+    # print("\n--- Testing Get Agents List Members (Default List ID: 67) ---")
+    # agent_members = client.getAgentsListMembersIds()
+    # print("Total Agent Members:", len(agent_members) if agent_members else 0)
+    # pretty_print("Agent Member IDs (first 5)", agent_members[:5] if agent_members else [])
+
+    # -------------------------------------------------------------
+    # 14. FILES SIGNED URL (2026-09)
+    # -------------------------------------------------------------
+    # print("\n--- Testing File Signed URL ---")
+    # TEST_FILE_ID = "314131221738"
+    # file_info = client.get_file_signed_url(TEST_FILE_ID)
+    # pretty_print("File Signed URL Info", file_info)
         
 
 

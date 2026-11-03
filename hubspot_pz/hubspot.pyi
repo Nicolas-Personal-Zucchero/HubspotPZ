@@ -333,9 +333,12 @@ class HubspotPZ:
         :return: True if successfully merged, False otherwise.
         """
     # Files
-    def get_file_signed_url(self, file_id: str) -> dict[str, Any] | None:
+    def get_file_signed_url(
+        self, file_id: str, expiration_seconds: int | None = ...
+    ) -> dict[str, Any] | None:
         """Retrieve the signed download URL information for a HubSpot file.
 
         :param file_id: HubSpot file record ID.
+        :param expiration_seconds: Time in seconds for the signed URL to remain valid (default: 604800 = 7 days).
         :return: File metadata dictionary containing signed URL, or None on error.
         """

@@ -361,13 +361,17 @@ client.mergeContacts(
 
 ### Files & Signed URLs
 
-Fetch a secure, time-limited signed URL to download private files stored in HubSpot's File Manager:
+Fetch a secure, time-limited signed URL to download private files stored in HubSpot's File Manager (defaults to 7 days validity, configurable via `expiration_seconds`):
 
 ```python
+# Default expiration: 7 days (604800 seconds)
 file_info = client.get_file_signed_url("1234567890")
 if file_info:
     download_url = file_info.get("url")
     print("Signed URL:", download_url)
+
+# Custom expiration (e.g. 24 hours)
+short_file_info = client.get_file_signed_url("1234567890", expiration_seconds=86400)
 ```
 
 ---

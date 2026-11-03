@@ -84,13 +84,13 @@ class HubspotPZ:
         if accumulated_objects is None:
             accumulated_objects = []
 
-        params: list[tuple[str, Any]] = [("limit", 100)]
+        params: dict[str, Any] = {"limit": 100}
         if after:
-            params.append(("after", after))
-        for prop in properties_names:
-            params.append(("properties", prop))
+            params["after"] = after
+        if properties_names:
+            params["properties"] = properties_names
         if associations_objects is not None:
-            params.append(("associations", ",".join(associations_objects)))
+            params["associations"] = ",".join(associations_objects)
 
         endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
 
@@ -221,13 +221,13 @@ class HubspotPZ:
         if properties_names is None:
             properties_names = []
 
-        params: list[tuple[str, str]] = []
+        params: dict[str, Any] = {}
         if identifying_property != "id":
-            params.append(("idProperty", identifying_property))
-        for prop in properties_names:
-            params.append(("properties", prop))
+            params["idProperty"] = identifying_property
+        if properties_names:
+            params["properties"] = properties_names
         if associations_objects is not None:
-            params.append(("associations", ",".join(associations_objects)))
+            params["associations"] = ",".join(associations_objects)
 
         endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
         r = requests.get(url=endpoint, headers=self._headers, params=params)
@@ -325,7 +325,7 @@ class HubspotPZ:
         return self._create_object("deals", properties)
     
     def getPipelineInfo(self, object_type: str, pipeline_id: str) -> Any:
-        endpoint = self._BASER_URL + f'/crm/v3/pipelines/{object_type}/{pipeline_id}'
+        endpoint = self._BASER_URL + f'/crm/pipelines/{self._CRM_API_VERSION}/{object_type}/{pipeline_id}'
         r = requests.get(url=endpoint, headers=self._headers)
         
         if r.status_code != 200:
@@ -531,7 +531,7 @@ class HubspotPZ:
     ) -> list[str] | None:
         """
         Generic function to retrieve contact IDs belonging to a list on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param list_id: ID of the list to retrieve members from
         :param accumulated_ids: Accumulated IDs during recursive calls
@@ -540,12 +540,14 @@ class HubspotPZ:
         """
         if accumulated_ids is None:
             accumulated_ids = []
-        
-        endpoint = self._BASER_URL + f'/crm/v3/lists/{list_id}/memberships?limit=250'
-        if after:
-            endpoint += f"&after={after}"
 
-        r = requests.get(url=endpoint, headers=self._headers)
+        params: dict[str, Any] = {"limit": 250}
+        if after:
+            params["after"] = after
+
+        endpoint = self._BASER_URL + f'/crm/lists/{self._CRM_API_VERSION}/{list_id}/memberships'
+
+        r = requests.get(url=endpoint, headers=self._headers, params=params)
 
         if r.status_code != 200:
             print(f"Error {r.status_code} during the retrieval of the members of a list.\nResponse Body: {r.text}")
@@ -709,7 +711,7 @@ class HubspotPZ:
         self,
         from_object_type: str,
         to_object_type: str,
-        associations: list[tuple[str, list[str]]]
+        associations: list[tuple[str, str]]
     ) -> bool:
         """
         Generic function to batch archive associations between multiple objects on HubSpot.
@@ -717,7 +719,7 @@ class HubspotPZ:
 
         :param from_object_type: Source object type
         :param to_object_type: Target object type
-        :param associations: List of tuples (toId, fromIds) representing associations to archive
+        :param associations: List of tuples (from_id, to_id) representing associations to archive
         :return: True if successful, False otherwise
         """
 
@@ -730,7 +732,14 @@ class HubspotPZ:
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
 
-        r = requests.post(url=endpoint, headers=self._headers, json={ "inputs": [{"from": {"id": toId}, "to": [{"id": fromId} for fromId in fromIds]} for toId, fromIds in batch] })
+        inputs = []
+        for from_id, to_id in batch:
+            inputs.append({
+                "from": {"id": str(from_id)},
+                "to": [{"id": str(to_id)}]
+            })
+
+        r = requests.post(url=endpoint, headers=self._headers, json={"inputs": inputs})
 
         if r.status_code not in (200, 204):
             print(f"Error {r.status_code} during the archivation in batch of associations between objects.\nResponse Body: {r.text}")
@@ -795,18 +804,23 @@ class HubspotPZ:
     
     ##########Files############################################
 
-    def get_file_signed_url(self, file_id: str) -> Any | None:
+    def get_file_signed_url(self, file_id: str, expiration_seconds: int | None = 604800) -> Any | None:
         """
         Function to retrieve a signed URL of a file on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param file_id: ID of the file to retrieve
+        :param expiration_seconds: Time in seconds for the signed URL to remain valid (default: 604800 = 7 days)
         :return: Signed URL of the file, or None on error
         """
 
-        endpoint = self._BASER_URL + f'/files/v3/files/{file_id}/signed-url'
+        endpoint = self._BASER_URL + f'/files/{self._CRM_API_VERSION}/files/{file_id}/signed-url'
 
-        r = requests.get(url=endpoint, headers=self._headers)
+        params: dict[str, Any] = {}
+        if expiration_seconds is not None:
+            params["expirationSeconds"] = expiration_seconds
+
+        r = requests.get(url=endpoint, headers=self._headers, params=params)
 
         if r.status_code != 200:
             print(f"Error {r.status_code} during the retrieval of the signed URL of a file on HubSpot.\nResponse Body: {r.text}")
