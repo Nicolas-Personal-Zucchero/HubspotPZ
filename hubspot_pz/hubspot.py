@@ -9,7 +9,8 @@ import requests
 
 class HubspotPZ:
     _BASER_URL = "https://api.hubapi.com"
-    _MAX_BATCH_SIZE = 100    
+    _MAX_BATCH_SIZE = 100
+    _ASSOCIATIONS_API_VERSION = "2026-09"
 
     _AGENT_LIST_ID = 67
     _AGENT_CONTACTS_LIST_ID = 64
@@ -568,7 +569,7 @@ class HubspotPZ:
         """
         Generic function to retrieve associations of an object on HubSpot.
         Recursive calls are not implemented as associations are capped at 500.
-        API Version V4.
+        API Version 2026-09.
 
         :param from_object_type: Source object type
         :param to_object_type: Target object type
@@ -576,14 +577,19 @@ class HubspotPZ:
         :return: List of associated object IDs, or None on error
         """
 
-        endpoint = self._BASER_URL + f"/crm/v4/objects/{from_object_type}/{from_object_id}/associations/{to_object_type}"
+        endpoint = self._BASER_URL + f"/crm/objects/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{from_object_id}/associations/{to_object_type}"
 
         r = requests.get(url=endpoint, headers=self._headers)
         if r.status_code != 200:
             print(f"Error {r.status_code} during the retrieval of associations between objects.\nResponse Body: {r.text}")
             return None
 
-        toIds = [to["to"]["toObjectId"] for to in r.json().get("results", [])]
+        toIds = []
+        for to in r.json().get("results", []):
+            if "toObjectId" in to:
+                toIds.append(str(to["toObjectId"]))
+            elif "to" in to and isinstance(to["to"], dict) and "toObjectId" in to["to"]:
+                toIds.append(str(to["to"]["toObjectId"]))
         return toIds
     
     def getContactAssociatedCompanies(self, contact_id: str) -> list[str] | None:
@@ -603,7 +609,7 @@ class HubspotPZ:
     ) -> dict[str, list[str]] | None:
         """
         Generic function to batch retrieve associations for multiple objects on HubSpot.
-        API Version V4.
+        API Version 2026-09.
 
         :param from_object_type: Source object type
         :param to_object_type: Target object type
@@ -623,7 +629,7 @@ class HubspotPZ:
         batch = from_object_ids[:self._MAX_BATCH_SIZE]
         remaining = from_object_ids[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASER_URL + f"/crm/v4/associations/{from_object_type}/{to_object_type}/batch/read"
+        endpoint = self._BASER_URL + f"/crm/associations/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
         
         for toId in batch:
             # Add key if not present (with empty list default)
@@ -647,13 +653,13 @@ class HubspotPZ:
         self,
         from_object_type: str,
         to_object_type: str,
-        associationTypeId: str,
+        associationTypeId: int,
         associations: list[tuple[str, str]]
     ) -> bool:
         
         """
         Generic function to batch create associations between multiple objects on HubSpot.
-        API Version V4.
+        API Version 2026-09.
 
         :param from_object_type: Source object type
         :param to_object_type: Target object type
@@ -666,7 +672,7 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASER_URL + f"/crm/v4/associations/{from_object_type}/{to_object_type}/batch/create"
+        endpoint = self._BASER_URL + f"/crm/associations/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
@@ -688,7 +694,7 @@ class HubspotPZ:
             }
         )
 
-        if r.status_code != 201:
+        if r.status_code not in (200, 201):
             print(f"Error {r.status_code} during the creation in batch of associations between objects.\nResponse Body: {r.text}")
             return False
         
@@ -702,7 +708,7 @@ class HubspotPZ:
     ) -> bool:
         """
         Generic function to batch archive associations between multiple objects on HubSpot.
-        API Version V4.
+        API Version 2026-09.
 
         :param from_object_type: Source object type
         :param to_object_type: Target object type
@@ -714,14 +720,14 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASER_URL + f"/crm/v4/associations/{from_object_type}/{to_object_type}/batch/archive"
+        endpoint = self._BASER_URL + f"/crm/associations/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
 
         r = requests.post(url=endpoint, headers=self._headers, json={ "inputs": [{"from": {"id": toId}, "to": [{"id": fromId} for fromId in fromIds]} for toId, fromIds in batch] })
 
-        if r.status_code != 204:
+        if r.status_code not in (200, 204):
             print(f"Error {r.status_code} during the archivation in batch of associations between objects.\nResponse Body: {r.text}")
             return False
         
@@ -737,16 +743,16 @@ class HubspotPZ:
         return self._get_object_associations_batch("contacts", "contacts", contacts_ids)
 
     def createContactsAssociatedCompaniesBatch(self, associations: list[tuple[str, str]]) -> bool:
-        return self._create_object_associations_batch("contacts", "companies", "1", associations)
+        return self._create_object_associations_batch("contacts", "companies", 1, associations)
     
     def archiveContactsAssociatedCompaniesBatch(self, associations: list[tuple[str, str]]) -> bool:
         return self._archive_object_associations_batch("contacts", "companies", associations)
     
     def createContactsAssociatedContactsBatch(self, associations: list[tuple[str, str]]) -> bool:
-        return self._create_object_associations_batch("contacts", "contacts", "449", associations)
+        return self._create_object_associations_batch("contacts", "contacts", 449, associations)
     
     def createContactsAssociatedDealsBatch(self, associations: list[tuple[str, str]]) -> bool:
-        return self._create_object_associations_batch("deals", "contacts", "3", associations)
+        return self._create_object_associations_batch("deals", "contacts", 3, associations)
 
     ##########Actions############################################
 

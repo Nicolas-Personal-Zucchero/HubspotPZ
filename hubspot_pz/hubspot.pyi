@@ -284,7 +284,7 @@ class HubspotPZ:
     def createContactsAssociatedCompaniesBatch(
         self, associations: list[tuple[str, str]]
     ) -> bool:
-        """Batch create associations between contacts and companies (association type ID: '1').
+        """Batch create associations between contacts and companies (association type ID: 1).
 
         :param associations: List of (contact_id, company_id) tuples.
         :return: True if successful, False otherwise.
@@ -302,7 +302,7 @@ class HubspotPZ:
     def createContactsAssociatedContactsBatch(
         self, associations: list[tuple[str, str]]
     ) -> bool:
-        """Batch create associations between contacts and other contacts (association type ID: '449').
+        """Batch create associations between contacts and other contacts (association type ID: 449).
 
         :param associations: List of (contact_id_from, contact_id_to) tuples.
         :return: True if successful, False otherwise.
@@ -311,7 +311,7 @@ class HubspotPZ:
     def createContactsAssociatedDealsBatch(
         self, associations: list[tuple[str, str]]
     ) -> bool:
-        """Batch create associations between deals and contacts (association type ID: '3').
+        """Batch create associations between deals and contacts (association type ID: 3).
 
         :param associations: List of (deal_id, contact_id) tuples.
         :return: True if successful, False otherwise.
