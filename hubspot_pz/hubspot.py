@@ -1,7 +1,11 @@
 #pip install .
-from typing import Optional, Dict, List, Tuple, Any
+from __future__ import annotations
+
+from datetime import date, datetime
+from typing import Any, ClassVar
+
 import requests
-from datetime import datetime
+
 
 class HubspotPZ:
     _BASER_URL = "https://api.hubapi.com"
@@ -10,37 +14,37 @@ class HubspotPZ:
     _AGENT_LIST_ID = 67
     _AGENT_CONTACTS_LIST_ID = 64
 
-    _DEFAULT_CONTACT_PROPERTY_LIST = ["email","firstname","lastname","phone","mobilephone","numero_referente","hs_additional_emails", "fonte"]
-    _DEFAULT_AGENT_PROPERTY_LIST = ["codice_mexal", "nome_mexal", "frequenza_liquidazione", "ruolo", "address", "cap", "city", "provincia", "data_inizio_contratto", "data_fine_contratto", "tipologia_contratto", "regione", "province", "note_zona", "dettagli_particolare"]
-    _DEFAULT_COMPANY_PROPERTY_LIST = ['codice_mexal','name','alias','partita_iva','categoria_mexal','segmento','city','provincia','region','paese','lingua','data_ultima_fattura','hs_country_code','stagionalita__cloned_','precancellata']
-    _DEFAULT_DEAL_PROPERTY_LIST =["dealname", "dealstage", "nome_cliente", "preventivo_confermato", "bozza_confermata"]
+    _DEFAULT_CONTACT_PROPERTY_LIST: ClassVar[list[str]] = ["email","firstname","lastname","phone","mobilephone","numero_referente","hs_additional_emails", "fonte"]
+    _DEFAULT_AGENT_PROPERTY_LIST: ClassVar[list[str]] = ["codice_mexal", "nome_mexal", "frequenza_liquidazione", "ruolo", "address", "cap", "city", "provincia", "data_inizio_contratto", "data_fine_contratto", "tipologia_contratto", "regione", "province", "note_zona", "dettagli_particolare"]
+    _DEFAULT_COMPANY_PROPERTY_LIST: ClassVar[list[str]] = ['codice_mexal','name','alias','partita_iva','categoria_mexal','segmento','city','provincia','region','paese','lingua','data_ultima_fattura','hs_country_code','stagionalita__cloned_','precancellata']
+    _DEFAULT_DEAL_PROPERTY_LIST: ClassVar[list[str]] = ["dealname", "dealstage", "nome_cliente", "preventivo_confermato", "bozza_confermata"]
 
     _CONTACT_PIPELINE_ID = "59157733"
-    _CONTACT_DEAL_PROPERTY_LIST = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "tipologia_prodotto_2", "rivenditore", "nome_cliente", "bozza_confermata", "amount", "motivo_rifiuto", "note", "pretrattativa", "fonte"]
+    _CONTACT_DEAL_PROPERTY_LIST: ClassVar[list[str]] = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "tipologia_prodotto_2", "rivenditore", "nome_cliente", "bozza_confermata", "amount", "motivo_rifiuto", "note", "pretrattativa", "fonte"]
 
     _AGENT_PIPELINE_ID = "2405411057"
-    _AGENT_DEAL_PROPERTY_LIST = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "motivo_rifiuto", "note"]
+    _AGENT_DEAL_PROPERTY_LIST: ClassVar[list[str]] = ["pipeline", "dealname", "dealstage", "createdate", "closedate", "motivo_rifiuto", "note"]
 
     def __init__(self, token: str) -> None:
-        self._initializeHubspotHeaders(token)
+        self._initialize_hubspot_headers(token)
 
-    def _initializeHubspotHeaders(self, token: str) -> None:
-        self._headers: Dict[str, str] = {
+    def _initialize_hubspot_headers(self, token: str) -> None:
+        self._headers: dict[str, str] = {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + token
         }
 
-    def _convertiData(self, timeMillisecond: str) -> Optional[datetime.date]:
-        if timeMillisecond == "":
+    def _convert_date(self, time_millisecond: str) -> date | None:
+        if time_millisecond == "":
             return None
-        millisecond = int(timeMillisecond)
+        millisecond = int(time_millisecond)
         timestamp = millisecond / 1000  # Converti millisecondi in secondi dividendo per 1000
         data = datetime.fromtimestamp(timestamp)
         return data.date()
 
     ##########Properties############################################
 
-    def _getPropertyInfo(self, object_type: str, property_name: str) -> Any:
+    def _get_property_info(self, object_type: str, property_name: str) -> Any:
         endpoint = self._BASER_URL + f'/crm/v3/properties/{object_type}/{property_name}'
         r = requests.get(url=endpoint, headers=self._headers)
         
@@ -50,22 +54,22 @@ class HubspotPZ:
         return r.json()
 
     def getContactPropertyInfo(self, property_name: str) -> Any:
-        return self._getPropertyInfo("contacts", property_name)
+        return self._get_property_info("contacts", property_name)
     
     def getCompanyPropertyInfo(self, property_name: str) -> Any:
-        return self._getPropertyInfo("companies", property_name)
+        return self._get_property_info("companies", property_name)
     
     ##########All Objects############################################
 
     #Tested and working
-    def _getAllObjects(
+    def _get_all_objects(
         self,
         object_type: str,
-        properties_names: List[str],
-        associations_objects: Optional[List[str]] = None,
-        accumulated_objects: Optional[List[Dict[str, str]]] = None,
-        after: str = None
-    ) -> List[Dict[str, str]]:
+        properties_names: list[str],
+        associations_objects: list[str] | None = None,
+        accumulated_objects: list[dict[str, str]] | None = None,
+        after: str | None = None
+    ) -> list[dict[str, str]]:
         """
         Funzione generica per ottenere tutti gli oggetti di un certo tipo (contatti, aziende, ecc.) su HubSpot.
         Versione API V3.
@@ -102,27 +106,27 @@ class HubspotPZ:
 
         next_page = r.json().get("paging", {}).get("next", {}).get("after")
         if next_page:
-            return self._getAllObjects(object_type, properties_names, associations_objects, accumulated_objects, next_page)
+            return self._get_all_objects(object_type, properties_names, associations_objects, accumulated_objects, next_page)
 
         return accumulated_objects
     
-    def getAllContacts(self, properties_names: List[str]) -> List[Dict[str, str]]:
-        return self._getAllObjects("contacts", properties_names, associations_objects=["companies"])
+    def getAllContacts(self, properties_names: list[str]) -> list[dict[str, str]]:
+        return self._get_all_objects("contacts", properties_names, associations_objects=["companies"])
     
-    def getAllCompanies(self, properties_names: List[str]) -> List[Dict[str, str]]:
-        return self._getAllObjects("companies", properties_names, associations_objects=["contacts"])
+    def getAllCompanies(self, properties_names: list[str]) -> list[dict[str, str]]:
+        return self._get_all_objects("companies", properties_names, associations_objects=["contacts"])
     
-    def getAllDeals(self, properties_names: List[str]) -> List[Dict[str, str]]:
-        return self._getAllObjects("0-3", properties_names, associations_objects=["contacts", "companies"])
+    def getAllDeals(self, properties_names: list[str]) -> list[dict[str, str]]:
+        return self._get_all_objects("0-3", properties_names, associations_objects=["contacts", "companies"])
 
     ##########Single Objects############################################
     
     #Tested and working
-    def _createObject(
+    def _create_object(
         self,
         object_type: str,
-        properties: Dict[str, str]
-    ) -> Optional[str]:
+        properties: dict[str, str]
+    ) -> str | None:
         """
         Funzione generica per creare un oggetto (contatto, azienda, ecc.) su HubSpot.
         Versione API V3.
@@ -142,7 +146,7 @@ class HubspotPZ:
         return r.json().get("id", None)  # Usa .get per evitare KeyError se l'ID non esiste
 
     #Tested and working
-    def _archiveObject(
+    def _archive_object(
         self,
         object_type: str,
         object_id: str
@@ -166,11 +170,11 @@ class HubspotPZ:
         return True
     
     #Tested and working
-    def _updateObject(
+    def _update_object(
         self,
         object_type: str,
         object_id: str,
-        properties: Dict[str, str]
+        properties: dict[str, str]
     ) -> bool:
         """
         Funzione generica per aggiornare un oggetto (contatto, azienda, ecc.) su HubSpot.
@@ -192,14 +196,14 @@ class HubspotPZ:
         return True  # Usa .get per evitare KeyError se l'ID non esiste
     
     #Tested and working
-    def _getObject(
+    def _get_object(
         self,
         object_type: str,
         object_id: str,
-        properties_names: List[str],
+        properties_names: list[str] | None = None,
         identifying_property: str = "id",
-        associations_objects: Optional[List[str]] = None,
-    ) -> Optional[Dict[str, str]]:
+        associations_objects: list[str] | None = None,
+    ) -> dict[str, str] | None:
         """
         Funzione generica per ottenere un oggetto (contatto, azienda, ecc.) su HubSpot.
         Versione API V3.
@@ -209,6 +213,8 @@ class HubspotPZ:
         :param properties_names: Proprietà dell'oggetto da ottenere
         :return: Un dizionario con le proprietà dell'oggetto richieste, oppure None in caso di errore
         """
+        if properties_names is None:
+            properties_names = []
 
         params_list = [f"properties={prop}" for prop in properties_names]
         if identifying_property != "id":
@@ -232,12 +238,12 @@ class HubspotPZ:
         return dict(sorted(retrieved_properties.items()))
 
     #Tested and working
-    def _searchObject(
+    def _search_object(
         self,
         object_type: str,
-        search_params: Dict[str, str],
-        properties_names: List[str]
-    ) -> Optional[Dict[str, str]]:
+        search_params: dict[str, str],
+        properties_names: list[str]
+    ) -> dict[str, str] | None:
         """
         Funzione generica per cercare un oggetto (contatto, azienda, ecc.) su HubSpot.
         Versione API V3.
@@ -267,50 +273,50 @@ class HubspotPZ:
         return output
     
     #Tested and working
-    def createContact(self, properties: Dict[str, str]) -> Optional[str]:
-        return self._createObject("contacts", properties)
+    def createContact(self, properties: dict[str, str]) -> str | None:
+        return self._create_object("contacts", properties)
 
     #Tested and working
-    def createCompany(self, properties: Dict[str, str]) -> Optional[str]:
-        return self._createObject("companies", properties)
+    def createCompany(self, properties: dict[str, str]) -> str | None:
+        return self._create_object("companies", properties)
     
     #Tested and working
     def archiveContact(self, contact_id: str) -> bool:
-        return self._archiveObject("contacts", contact_id)
+        return self._archive_object("contacts", contact_id)
 
     #Tested and working
     def archiveCompany(self, company_id: str) -> bool:
-        return self._archiveObject("companies", company_id)
+        return self._archive_object("companies", company_id)
 
     #Tested and working
-    def updateContact(self, contact_id: str, properties: Dict[str, str]) -> bool:
-        return self._updateObject("contacts", contact_id, properties)
+    def updateContact(self, contact_id: str, properties: dict[str, str]) -> bool:
+        return self._update_object("contacts", contact_id, properties)
     
     #Tested and working
-    def updateCompany(self, company_id: str, properties: Dict[str, str]) -> bool:
-        return self._updateObject("companies", company_id, properties)
+    def updateCompany(self, company_id: str, properties: dict[str, str]) -> bool:
+        return self._update_object("companies", company_id, properties)
     
     #Tested and working
-    def getContact(self, contact_id: str, properties_names: List[str] = []) -> Optional[Dict[str, str]]:
-        return self._getObject("contacts", contact_id, properties_names, associations_objects=["companies"])
+    def getContact(self, contact_id: str, properties_names: list[str] | None = None) -> dict[str, str] | None:
+        return self._get_object("contacts", contact_id, properties_names, associations_objects=["companies"])
 
     #Tested and working
-    def getContactByEmail(self, contact_email: str, properties_names: List[str] = []) -> Optional[Dict[str, str]]:
-        return self._getObject("contacts", contact_email, properties_names, "email", associations_objects=["companies"])
+    def getContactByEmail(self, contact_email: str, properties_names: list[str] | None = None) -> dict[str, str] | None:
+        return self._get_object("contacts", contact_email, properties_names, "email", associations_objects=["companies"])
     
     #Tested and working
-    def getCompany(self, company_id: str, properties_names: List[str] = []) -> Optional[Dict[str, str]]:
-        return self._getObject("companies", company_id, properties_names, associations_objects=["contacts"])
+    def getCompany(self, company_id: str, properties_names: list[str] | None = None) -> dict[str, str] | None:
+        return self._get_object("companies", company_id, properties_names, associations_objects=["contacts"])
     
-    def createAgentDeal(self, properties: Dict[str, str]) -> Optional[str]:
+    def createAgentDeal(self, properties: dict[str, str]) -> str | None:
         #https://app-eu1.hubspot.com/property-settings/25378285/properties?type=0-3&eschref=%2Fcontacts%2F25378285%2Fobjects%2F0-3%2Frestore&search=pip&action=edit&property=pipeline
         properties["pipeline"] = "2405411057"
-        return self._createObject("deals", properties)
+        return self._create_object("deals", properties)
     
-    def createContactDeal(self, properties: Dict[str, str]) -> Optional[str]:
+    def createContactDeal(self, properties: dict[str, str]) -> str | None:
         #https://app-eu1.hubspot.com/property-settings/25378285/properties?type=0-3&eschref=%2Fcontacts%2F25378285%2Fobjects%2F0-3%2Frestore&search=pip&action=edit&property=pipeline
         properties["pipeline"] = "59157733"
-        return self._createObject("deals", properties)
+        return self._create_object("deals", properties)
     
     def getPipelineInfo(self, object_type: str, pipeline_id: str) -> Any:
         endpoint = self._BASER_URL + f'/crm/v3/pipelines/{object_type}/{pipeline_id}'
@@ -323,12 +329,12 @@ class HubspotPZ:
     
     ##########Objects Batch############################################
 
-    def _createObjectBatch(
+    def _create_object_batch(
         self,
         object_type: str,
-        properties_list: List[Dict[str, str]],
-        accumulated_ids: Optional[List[str]] = None
-    ) -> Optional[List[str]]:
+        properties_list: list[dict[str, str]],
+        accumulated_ids: list[str] | None = None
+    ) -> list[str] | None:
         """
         Funzione generica per creare un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
         Versione API V3.
@@ -364,12 +370,12 @@ class HubspotPZ:
             results = r.json().get("results", [])
             accumulated_ids.extend([result.get("id") for result in results if result.get("id")])
         
-        return self._createObjectBatch(object_type, remaining, accumulated_ids)
+        return self._create_object_batch(object_type, remaining, accumulated_ids)
 
-    def _archiveObjectBatch(
+    def _archive_object_batch(
         self,
         object_type: str,
-        id_list: List[str]
+        id_list: list[str]
     ) -> bool:
         """
         Funzione generica per archiviare un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
@@ -397,12 +403,12 @@ class HubspotPZ:
             print(f"Error {r.status_code} during the archivation of a batch of objects on HubSpot.\nResponse Body: {r.text}")
             return False
         
-        return self._archiveObjectBatch(object_type, remaining)
+        return self._archive_object_batch(object_type, remaining)
         
-    def _updateObjectBatch(
+    def _update_object_batch(
         self,
         object_type: str,
-        id_to_properties_list: Dict[str, Dict[str, str]]
+        id_to_properties_list: dict[str, dict[str, str]]
     ) -> bool:
         """
         Funzione generica per aggiornare un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
@@ -431,15 +437,15 @@ class HubspotPZ:
             print(f"Error {r.status_code} during the update of a batch of objects on HubSpot.\nResponse Body: {r.text}")
             return False
         
-        return self._updateObjectBatch(object_type, remaining)
+        return self._update_object_batch(object_type, remaining)
 
-    def _getObjectBatch(
+    def _get_object_batch(
         self,
         object_type: str,
-        id_list: List[str],
-        properties_names: List[str],
-        accumulated_objects: Optional[List[Dict[str, str]]] = None
-    ) -> Optional[List[Dict[str, str]]]:
+        id_list: list[str],
+        properties_names: list[str],
+        accumulated_objects: list[dict[str, str]] | None = None
+    ) -> list[dict[str, str]] | None:
         """
         Funzione generica per ottenere un batch di oggetti (contatti, aziende, ecc.) su HubSpot.
         Versione API V3.
@@ -478,31 +484,31 @@ class HubspotPZ:
             output.append(retrieved_properties)
         accumulated_objects.extend(output)
         
-        return self._getObjectBatch(object_type, remaining, properties_names, accumulated_objects)
+        return self._get_object_batch(object_type, remaining, properties_names, accumulated_objects)
      
-    def createContactBatch(self, properties_list: List[Dict[str, str]]) -> Optional[List[str]]:
-        return self._createObjectBatch("contacts", properties_list)
+    def createContactBatch(self, properties_list: list[dict[str, str]]) -> list[str] | None:
+        return self._create_object_batch("contacts", properties_list)
 
-    def createCompanyBatch(self, properties_list: List[Dict[str, str]]) -> Optional[List[str]]:
-        return self._createObjectBatch("companies", properties_list)
+    def createCompanyBatch(self, properties_list: list[dict[str, str]]) -> list[str] | None:
+        return self._create_object_batch("companies", properties_list)
     
-    def archiveContactBatch(self, id_list: List[str]) -> bool:
-        return self._archiveObjectBatch("contacts", id_list)
+    def archiveContactBatch(self, id_list: list[str]) -> bool:
+        return self._archive_object_batch("contacts", id_list)
 
-    def archiveCompanyBatch(self, id_list: List[str]) -> bool:
-        return self._archiveObjectBatch("companies", id_list)
+    def archiveCompanyBatch(self, id_list: list[str]) -> bool:
+        return self._archive_object_batch("companies", id_list)
     
-    def updateContactBatch(self, id_to_properties_list: Dict[str, Dict[str, str]]) -> bool:
-        return self._updateObjectBatch("contacts", id_to_properties_list)
+    def updateContactBatch(self, id_to_properties_list: dict[str, dict[str, str]]) -> bool:
+        return self._update_object_batch("contacts", id_to_properties_list)
 
-    def updateCompanyBatch(self, id_to_properties_list: Dict[str, Dict[str, str]]) -> bool:
-        return self._updateObjectBatch("companies", id_to_properties_list)
+    def updateCompanyBatch(self, id_to_properties_list: dict[str, dict[str, str]]) -> bool:
+        return self._update_object_batch("companies", id_to_properties_list)
     
-    def getContactBatch(self, id_list: List[str], properties_names: List[str]) -> Optional[List[Dict[str, str]]]:
-        return self._getObjectBatch("contacts", id_list, properties_names)
+    def getContactBatch(self, id_list: list[str], properties_names: list[str]) -> list[dict[str, str]] | None:
+        return self._get_object_batch("contacts", id_list, properties_names)
 
-    def getCompanyBatch(self, id_list: List[str], properties_names: List[str]) -> Optional[List[Dict[str, str]]]:
-        return self._getObjectBatch("companies", id_list, properties_names)
+    def getCompanyBatch(self, id_list: list[str], properties_names: list[str]) -> list[dict[str, str]] | None:
+        return self._get_object_batch("companies", id_list, properties_names)
 
     ##########Lists############################################
 
@@ -510,9 +516,9 @@ class HubspotPZ:
     def getListMembersIds(
         self,
         list_id: str,
-        accumulated_ids: Optional[List[str]] = None,
-        after: str = None
-    ) -> Optional[List[str]]:
+        accumulated_ids: list[str] | None = None,
+        after: str | None = None
+    ) -> list[str] | None:
         """
         Funzione generica per ottenere i contatti facenti parte di una lista su HubSpot.
         Versione API V3.
@@ -543,17 +549,17 @@ class HubspotPZ:
         return accumulated_ids
 
     #Tested and working
-    def getAgentsListMembersIds(self) -> Optional[List[str]]:
+    def getAgentsListMembersIds(self) -> list[str] | None:
         return self.getListMembersIds(self._AGENT_LIST_ID)
     
     ##########Associations############################################
 
-    def _getObjectAssociations(
+    def _get_object_associations(
         self,
         from_object_type: str,
         to_object_type: str,
         from_object_id: str
-    ) -> Optional[List[str]]:
+    ) -> list[str] | None:
         """
         Funzione generica per ottenere le associazioni di un oggetto su HubSpot.
         Non ho implementato le chiamate ricorsive in quanto, essendo il limite a 500 associazioni, non dovrebbe mai essere necessario.
@@ -575,21 +581,21 @@ class HubspotPZ:
         toIds = [to["to"]["toObjectId"] for to in r.json().get("results", [])]
         return toIds
     
-    def getContactAssociatedCompanies(self, contact_id: str) -> Optional[List[str]]:
-        return self._getObjectAssociations("contacts", "companies", contact_id)
+    def getContactAssociatedCompanies(self, contact_id: str) -> list[str] | None:
+        return self._get_object_associations("contacts", "companies", contact_id)
 
-    def getCompanyAssociatedContacts(self, company_id: str) -> Optional[List[str]]:
-        return self._getObjectAssociations("companies", "contacts", company_id)
+    def getCompanyAssociatedContacts(self, company_id: str) -> list[str] | None:
+        return self._get_object_associations("companies", "contacts", company_id)
     
     ##########Associations Batch############################################
 
-    def _getObjectAssociationsBatch(
+    def _get_object_associations_batch(
         self,
         from_object_type: str,
         to_object_type: str,
-        from_object_ids: List[str],
-        accumulated_associations: Optional[Dict[str, List[str]]] = None
-    ) -> Optional[Dict[str, List[str]]]:
+        from_object_ids: list[str],
+        accumulated_associations: dict[str, list[str]] | None = None
+    ) -> dict[str, list[str]] | None:
         """
         Funzione generica per ottenere le associazioni di molteplici oggetti su HubSpot.
         Versione API V4.
@@ -629,14 +635,14 @@ class HubspotPZ:
             toids = [str(to["toObjectId"]) for to in result.get("to", [])]
             accumulated_associations[fromId] = toids
 
-        return self._getObjectAssociationsBatch(from_object_type, to_object_type, remaining, accumulated_associations)
+        return self._get_object_associations_batch(from_object_type, to_object_type, remaining, accumulated_associations)
     
-    def _createObjectAssociationsBatch(
+    def _create_object_associations_batch(
         self,
         from_object_type: str,
         to_object_type: str,
         associationTypeId: str,
-        associations: List[Tuple[str, str]]
+        associations: list[tuple[str, str]]
     ) -> bool:
         
         """
@@ -680,13 +686,13 @@ class HubspotPZ:
             print(f"Error {r.status_code} during the creation in batch of associations between objects.\nResponse Body: {r.text}")
             return False
         
-        return self._createObjectAssociationsBatch(from_object_type, to_object_type, associationTypeId, remaining)
+        return self._create_object_associations_batch(from_object_type, to_object_type, associationTypeId, remaining)
 
-    def _archiveObjectAssociationsBatch(
+    def _archive_object_associations_batch(
         self,
         from_object_type: str,
         to_object_type: str,
-        associations: List[Tuple[str, List[str]]]
+        associations: list[tuple[str, list[str]]]
     ) -> bool:
         """
         Funzione generica per archiviare le associazioni di molteplici oggetti su HubSpot.
@@ -713,32 +719,32 @@ class HubspotPZ:
             print(f"Error {r.status_code} during the archivation in batch of associations between objects.\nResponse Body: {r.text}")
             return False
         
-        return self._archiveObjectAssociationsBatch(from_object_type, to_object_type, remaining)
+        return self._archive_object_associations_batch(from_object_type, to_object_type, remaining)
     
-    def getContactsAssociatedCompaniesBatch(self, contacts_ids: List[str]) -> Optional[Dict[str, List[str]]]:
-        return self._getObjectAssociationsBatch("contacts", "companies", contacts_ids)
+    def getContactsAssociatedCompaniesBatch(self, contacts_ids: list[str]) -> dict[str, list[str]] | None:
+        return self._get_object_associations_batch("contacts", "companies", contacts_ids)
     
-    def getCompaniesAssociatedContactsBatch(self, companies_ids: List[str]) -> Optional[Dict[str, List[str]]]:
-        return self._getObjectAssociationsBatch("companies", "contacts", companies_ids)
+    def getCompaniesAssociatedContactsBatch(self, companies_ids: list[str]) -> dict[str, list[str]] | None:
+        return self._get_object_associations_batch("companies", "contacts", companies_ids)
     
-    def getContactsAssociatedContactsBatch(self, contacts_ids: List[str]) -> Optional[Dict[str, List[str]]]:
-        return self._getObjectAssociationsBatch("contacts", "contacts", contacts_ids)
+    def getContactsAssociatedContactsBatch(self, contacts_ids: list[str]) -> dict[str, list[str]] | None:
+        return self._get_object_associations_batch("contacts", "contacts", contacts_ids)
 
-    def createContactsAssociatedCompaniesBatch(self, associations: List[Tuple[str, str]]) -> bool:
-        return self._createObjectAssociationsBatch("contacts", "companies", "1", associations)
+    def createContactsAssociatedCompaniesBatch(self, associations: list[tuple[str, str]]) -> bool:
+        return self._create_object_associations_batch("contacts", "companies", "1", associations)
     
-    def archiveContactsAssociatedCompaniesBatch(self, associations: List[Tuple[str, str]]) -> bool:
-        return self._archiveObjectAssociationsBatch("contacts", "companies", associations)
+    def archiveContactsAssociatedCompaniesBatch(self, associations: list[tuple[str, str]]) -> bool:
+        return self._archive_object_associations_batch("contacts", "companies", associations)
     
-    def createContactsAssociatedContactsBatch(self, associations: List[Tuple[str, str]]) -> bool:
-        return self._createObjectAssociationsBatch("contacts", "contacts", "449", associations)
+    def createContactsAssociatedContactsBatch(self, associations: list[tuple[str, str]]) -> bool:
+        return self._create_object_associations_batch("contacts", "contacts", "449", associations)
     
-    def createContactsAssociatedDealsBatch(self, associations: List[Tuple[str, str]]) -> bool:
-        return self._createObjectAssociationsBatch("deals", "contacts", "3", associations)
+    def createContactsAssociatedDealsBatch(self, associations: list[tuple[str, str]]) -> bool:
+        return self._create_object_associations_batch("deals", "contacts", "3", associations)
 
     ##########Actions############################################
 
-    def _mergeObjects(
+    def _merge_objects(
         self,
         object_type: str,
         main_object_id: str,
@@ -764,14 +770,14 @@ class HubspotPZ:
         return True
     
     def mergeCompanies(self, main_company_id: str, company_to_merge_id: str) -> bool:
-        return self._mergeObjects("companies", main_company_id, company_to_merge_id)
+        return self._merge_objects("companies", main_company_id, company_to_merge_id)
     
     def mergeContacts(self, main_contact_id: str, contact_to_merge_id: str) -> bool:
-        return self._mergeObjects("contacts", main_contact_id, contact_to_merge_id)
+        return self._merge_objects("contacts", main_contact_id, contact_to_merge_id)
     
     ##########Files############################################
 
-    def get_file_signed_url(self, file_id: str) -> Optional[Any]:
+    def get_file_signed_url(self, file_id: str) -> Any | None:
         """
         Funzione per ottenere l'URL firmato di un file su HubSpot.
         Versione API V3.
