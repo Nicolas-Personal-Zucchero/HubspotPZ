@@ -9,3 +9,6 @@ authors = [
   { name="Nicolas Amadori", email="nicolas.amadori02@gmail.com" },
 ]
 dependencies = []
+
+[tool.setuptools.package-data]
+hubspot_pz = ["py.typed", "*.pyi"]
