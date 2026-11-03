@@ -10,7 +10,7 @@ import requests
 class HubspotPZ:
     _BASER_URL = "https://api.hubapi.com"
     _MAX_BATCH_SIZE = 100
-    _ASSOCIATIONS_API_VERSION = "2026-09"
+    _CRM_API_VERSION = "2026-09"
 
     _AGENT_LIST_ID = 67
     _AGENT_CONTACTS_LIST_ID = 64
@@ -46,7 +46,7 @@ class HubspotPZ:
     ##########Properties############################################
 
     def _get_property_info(self, object_type: str, property_name: str) -> Any:
-        endpoint = self._BASER_URL + f'/crm/v3/properties/{object_type}/{property_name}'
+        endpoint = self._BASER_URL + f'/crm/properties/{self._CRM_API_VERSION}/{object_type}/{property_name}'
         r = requests.get(url=endpoint, headers=self._headers)
         
         if r.status_code != 200:
@@ -73,7 +73,7 @@ class HubspotPZ:
     ) -> list[dict[str, str]]:
         """
         Generic function to retrieve all objects of a given type (contacts, companies, etc.) from HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of objects (e.g. 'contacts' or 'companies')
         :param properties_names: List of property names to retrieve for each object
@@ -84,16 +84,17 @@ class HubspotPZ:
         if accumulated_objects is None:
             accumulated_objects = []
 
-        params_list = [f"properties={prop}" for prop in properties_names]
-        if associations_objects is not None:
-            params_list.append(f"associations={','.join(associations_objects)}")
+        params: list[tuple[str, Any]] = [("limit", 100)]
         if after:
-            params_list.insert(0, f"after={after}")
-        params = "&".join(params_list)
+            params.append(("after", after))
+        for prop in properties_names:
+            params.append(("properties", prop))
+        if associations_objects is not None:
+            params.append(("associations", ",".join(associations_objects)))
 
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}?limit=100&{params}'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
 
-        r = requests.get(url=endpoint, headers=self._headers)
+        r = requests.get(url=endpoint, headers=self._headers, params=params)
 
         if r.status_code != 200:
             print(f"Error {r.status_code} during the retrieval of all contacts.\nResponse Body: {r.text}")
@@ -131,14 +132,14 @@ class HubspotPZ:
     ) -> str | None:
         """
         Generic function to create an object (contact, company, etc.) on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
         :param properties: Properties of the object to create
         :return: ID of the created object, or None on error
         """
 
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
         r = requests.post(url=endpoint, headers=self._headers, json={ "properties": properties })
         
         if r.status_code != 201:
@@ -155,14 +156,14 @@ class HubspotPZ:
     ) -> bool:
         """
         Generic function to archive an object (contact, company, etc.) on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
         :param object_id: ID of the object to archive
         :return: True if successfully archived, False otherwise
         """
 
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/{object_id}'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
         r = requests.delete(url=endpoint, headers=self._headers)
         
         if r.status_code != 204:
@@ -180,7 +181,7 @@ class HubspotPZ:
     ) -> bool:
         """
         Generic function to update an object (contact, company, etc.) on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
         :param object_id: ID of the object to update
@@ -188,7 +189,7 @@ class HubspotPZ:
         :return: True if successfully updated, False otherwise
         """
 
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/{object_id}'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
         r = requests.patch(url=endpoint, headers=self._headers, json={ "properties": properties })
         
         if r.status_code != 200:
@@ -208,7 +209,7 @@ class HubspotPZ:
     ) -> dict[str, str] | None:
         """
         Generic function to retrieve an object (contact, company, etc.) from HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
         :param object_id: ID of the object to retrieve (can be any unique field, like email, passed in identifying_property)
@@ -220,17 +221,16 @@ class HubspotPZ:
         if properties_names is None:
             properties_names = []
 
-        params_list = [f"properties={prop}" for prop in properties_names]
+        params: list[tuple[str, str]] = []
         if identifying_property != "id":
-            params_list.insert(0, f"idProperty={identifying_property}")
-
+            params.append(("idProperty", identifying_property))
+        for prop in properties_names:
+            params.append(("properties", prop))
         if associations_objects is not None:
-            params_list.append(f"associations={','.join(associations_objects)}")
+            params.append(("associations", ",".join(associations_objects)))
 
-        params = "&".join(params_list)
-        
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/{object_id}?{params}'
-        r = requests.get(url=endpoint, headers=self._headers)
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
+        r = requests.get(url=endpoint, headers=self._headers, params=params)
         
         if r.status_code != 200:
             print(f"Error {r.status_code} during the retrieval of an object on HubSpot.\nResponse Body: {r.text}")
@@ -250,14 +250,14 @@ class HubspotPZ:
     ) -> dict[str, str] | None:
         """
         Generic function to search for an object (contact, company, etc.) on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
         :param search_params: Properties and values to filter the search by
         :param properties_names: Properties of the object to retrieve
         :return: Dictionary with requested object properties, or None on error
         """
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/search'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/search'
         r = requests.post(url=endpoint, headers=self._headers,
                          json={"properties": properties_names,
                                "filterGroups":[
@@ -278,6 +278,8 @@ class HubspotPZ:
     
     #Tested and working
     def createContact(self, properties: dict[str, str]) -> str | None:
+        # Mandatory legal basis for contact creation
+        properties["hs_legal_basis"] = "Legitimate interest – existing customer"
         return self._create_object("contacts", properties)
 
     #Tested and working
@@ -341,7 +343,7 @@ class HubspotPZ:
     ) -> list[str] | None:
         """
         Generic function to batch create objects (contacts, companies, etc.) on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         In this implementation associations are not handled (batch creation of objects only, without relations).
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
@@ -361,12 +363,12 @@ class HubspotPZ:
         batch = properties_list[:self._MAX_BATCH_SIZE]
         remaining = properties_list[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/batch/create'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/create'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"properties": properties} for properties in batch] })
 
-        if r.status_code != 201:
+        if r.status_code not in (200, 201):
             # Status code 207 is multi-status (some objects may have succeeded and others failed)
             print(f"Error {r.status_code} during the creation of a batch of objects on HubSpot.\nResponse Body: {r.text}")
             # return None
@@ -383,7 +385,7 @@ class HubspotPZ:
     ) -> bool:
         """
         Generic function to batch archive objects (contacts, companies, etc.) on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of objects (e.g. 'contacts' or 'companies')
         :param id_list: List of IDs to archive
@@ -398,12 +400,12 @@ class HubspotPZ:
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
         
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/batch/archive'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/archive'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"id": id} for id in batch] })
 
-        if r.status_code != 204:
+        if r.status_code not in (200, 204):
             print(f"Error {r.status_code} during the archivation of a batch of objects on HubSpot.\nResponse Body: {r.text}")
             return False
         
@@ -416,7 +418,7 @@ class HubspotPZ:
     ) -> bool:
         """
         Generic function to batch update objects (contacts, companies, etc.) on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
         :param id_to_properties_list: Dictionary mapping object IDs to property dictionaries to update
@@ -431,7 +433,7 @@ class HubspotPZ:
         batch = dict(list(id_to_properties_list.items())[:self._MAX_BATCH_SIZE]) # First MAX_BATCH_SIZE elements
         remaining = dict(list(id_to_properties_list.items())[self._MAX_BATCH_SIZE:]) # Remaining elements
         
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/batch/update'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/update'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"id": id, "properties": properties} for id, properties in batch.items()] })
@@ -452,7 +454,7 @@ class HubspotPZ:
     ) -> list[dict[str, str]] | None:
         """
         Generic function to batch retrieve objects (contacts, companies, etc.) from HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of objects (e.g. 'contacts' or 'companies')
         :param id_list: List of IDs to retrieve
@@ -472,12 +474,12 @@ class HubspotPZ:
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/batch/read'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/read'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"id": id} for id in batch], "properties": properties_names })
 
-        if r.status_code != 200:
+        if r.status_code not in (200, 207):
             print(f"Error {r.status_code} during the retrieval of a batch of objects on HubSpot.\nResponse Body: {r.text}")
             return None
         
@@ -492,6 +494,9 @@ class HubspotPZ:
         return self._get_object_batch(object_type, remaining, properties_names, accumulated_objects)
      
     def createContactBatch(self, properties_list: list[dict[str, str]]) -> list[str] | None:
+        for properties in properties_list:
+            # Mandatory legal basis for contact creation
+            properties["hs_legal_basis"] = "Legitimate interest – existing customer"
         return self._create_object_batch("contacts", properties_list)
 
     def createCompanyBatch(self, properties_list: list[dict[str, str]]) -> list[str] | None:
@@ -577,7 +582,7 @@ class HubspotPZ:
         :return: List of associated object IDs, or None on error
         """
 
-        endpoint = self._BASER_URL + f"/crm/objects/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{from_object_id}/associations/{to_object_type}"
+        endpoint = self._BASER_URL + f"/crm/objects/{self._CRM_API_VERSION}/{from_object_type}/{from_object_id}/associations/{to_object_type}"
 
         r = requests.get(url=endpoint, headers=self._headers)
         if r.status_code != 200:
@@ -629,7 +634,7 @@ class HubspotPZ:
         batch = from_object_ids[:self._MAX_BATCH_SIZE]
         remaining = from_object_ids[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASER_URL + f"/crm/associations/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
+        endpoint = self._BASER_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
         
         for toId in batch:
             # Add key if not present (with empty list default)
@@ -672,7 +677,7 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASER_URL + f"/crm/associations/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
+        endpoint = self._BASER_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
@@ -720,7 +725,7 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASER_URL + f"/crm/associations/{self._ASSOCIATIONS_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
+        endpoint = self._BASER_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
@@ -764,7 +769,7 @@ class HubspotPZ:
     ) -> bool:
         """
         Function to merge two objects on HubSpot.
-        API Version V3.
+        API Version 2026-09.
         
         :param object_type: Type of object (e.g. 'companies' or 'contacts')
         :param main_object_id: ID of the primary object
@@ -772,7 +777,7 @@ class HubspotPZ:
         :return: True if merged successfully, False otherwise
         """
 
-        endpoint = self._BASER_URL + f'/crm/v3/objects/{object_type}/merge'
+        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/merge'
 
         r = requests.post(url=endpoint, headers=self._headers, json={ "objectIdToMerge": object_to_merge_id, "primaryObjectId": main_object_id })
 

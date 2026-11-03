@@ -60,41 +60,157 @@ def main() -> None:
     client = HubspotPZ(token)
     print("[+] HubspotPZ initialized successfully.")
 
+    # =============================================================
+    # MANUAL TESTS: CONTACTS & COMPANIES (MIGRATED TO 2026-09)
+    # Uncomment the section you wish to test.
+    # =============================================================
+
     # -------------------------------------------------------------
-    # 1. READ OBJECTS
+    # 1. PROPERTIES INFO (2026-09) -> TESTED
     # -------------------------------------------------------------
-    # print("\n--- Fetching contacts ---")
+    # print("\n--- Testing Contact Property Info ---")
+    # property_name = "firstname"
+    # contact_prop = client.getContactPropertyInfo(property_name)
+    # pretty_print(f"Contact '{property_name}' Property Info", contact_prop)
+
+    # print("\n--- Testing Company Property Info ---")
+    # property_name = "name"
+    # company_prop = client.getCompanyPropertyInfo(property_name)
+    # pretty_print(f"Company '{property_name}' Property Info", company_prop)
+
+    # -------------------------------------------------------------
+    # 2. READ ALL OBJECTS (2026-09, Automatic Pagination) -> TESTED
+    # -------------------------------------------------------------
+    # print("\n--- Fetching All Contacts (first 3) ---")
     # contacts = client.getAllContacts(["email", "firstname", "lastname"])
-    # pretty_print("First 2 contacts", contacts[:2] if contacts else [])
+    # print("Total Contacts:", len(contacts) if contacts else 0)
+    # pretty_print("Contacts (first 3)", contacts[:3] if contacts else [])
+
+    # print("\n--- Fetching All Companies (first 3) ---")
+    # companies = client.getAllCompanies(["name", "domain", "city"])
+    # print("Total Companies:", len(companies) if companies else 0)
+    # pretty_print("Companies (first 3)", companies[:3] if companies else [])
 
     # -------------------------------------------------------------
-    # 2. SINGLE CONTACT
+    # 3. SINGLE OBJECT READ (2026-09) -> TESTED
     # -------------------------------------------------------------
-    # email = "nicolas.amadori02@gmail.com"
-    # contact = client.getContactByEmail(email, ["email", "firstname", "lastname"])
-    # pretty_print("Contact details", contact)
+    # print("\n--- Testing Get Contact by ID ---")
+    # contact = client.getContact(NICOLAS_1_CONTACT_ID, ["email", "firstname", "lastname"])
+    # pretty_print("Contact by ID", contact)
+
+    # print("\n--- Testing Get Contact by Email ---")
+    # contact_by_email = client.getContactByEmail("nicolas.amadori02@gmail.com", ["email", "firstname", "lastname"])
+    # pretty_print("Contact by Email", contact_by_email)
+
+    # print("\n--- Testing Get Company by ID ---")
+    # company = client.getCompany(PZ_COMPANY_ID, ["name", "city", "partita_iva"])
+    # pretty_print("Company by ID", company)
 
     # -------------------------------------------------------------
-    # 3. CREATE, UPDATE, AND ARCHIVE
+    # 4. SINGLE CONTACT LIFECYCLE (2026-09: Create -> Update -> Archive) -> TESTED
     # -------------------------------------------------------------
-    # new_id = client.createContact({
-    #     "email": "test_dev_playground@example.com",
+    # print("\n--- Testing Contact Lifecycle (Create -> Update -> Archive) ---")
+    # test_contact_id = client.createContact({
+    #     "email": "test_playground_2026_09@example.com",
     #     "firstname": "Playground",
-    #     "lastname": "Test"
+    #     "lastname": "Tester"
     # })
-    # print(f"Contact created with ID: {new_id}")
-    #
-    # if new_id:
-    #     updated = client.updateContact(new_id, {"firstname": "PlaygroundUpdated"})
-    #     print(f"Contact update: {updated}")
-    #
-    #     archived = client.archiveContact(new_id)
-    #     print(f"Contact archive: {archived}")
+    # print(f"Created Contact ID: {test_contact_id}")
+    
+    # if test_contact_id:
+    #     updated = client.updateContact(test_contact_id, {"firstname": "PlaygroundUpdated"})
+    #     print(f"Contact Updated: {updated}")
+        
+    #     fetched = client.getContact(test_contact_id, ["email", "firstname", "lastname"])
+    #     pretty_print("Fetched Updated Contact", fetched)
+    
+    #     archived = client.archiveContact(test_contact_id)
+    #     print(f"Contact Archived: {archived}")
 
     # -------------------------------------------------------------
-    # TEST MIGRATED ASSOCIATIONS (2026-09)
+    # 5. SINGLE COMPANY LIFECYCLE (2026-09: Create -> Update -> Archive) -> TESTED
     # -------------------------------------------------------------
-    print(f"\n[+] Active Associations API Version: {client._ASSOCIATIONS_API_VERSION}")
+    # print("\n--- Testing Company Lifecycle (Create -> Update -> Archive) ---")
+    # test_company_id = client.createCompany({
+    #     "name": "Playground Test Srl",
+    #     "city": "Bologna"
+    # })
+    # print(f"Created Company ID: {test_company_id}")
+    
+    # if test_company_id:
+    #     updated = client.updateCompany(test_company_id, {"city": "Modena"})
+    #     print(f"Company Updated: {updated}")
+        
+    #     fetched = client.getCompany(test_company_id, ["name", "city"])
+    #     pretty_print("Fetched Updated Company", fetched)
+    
+    #     archived = client.archiveCompany(test_company_id)
+    #     print(f"Company Archived: {archived}")
+
+    # -------------------------------------------------------------
+    # 6. BATCH OPERATIONS: CONTACTS (2026-09: Create -> Read -> Update -> Archive) -> TESTED
+    # -------------------------------------------------------------
+    # print("\n--- Testing Contacts Batch Operations ---")
+    # batch_contact_ids = client.createContactBatch([
+    #     {"email": "batch_test_1@example.com", "firstname": "Batch1", "lastname": "Test"},
+    #     {"email": "batch_test_2@example.com", "firstname": "Batch2", "lastname": "Test"}
+    # ])
+    # print(f"Batch Contacts Created IDs: {batch_contact_ids}")
+    
+    # if batch_contact_ids:
+    #     batch_read = client.getContactBatch(batch_contact_ids, ["email", "firstname", "lastname"])
+    #     pretty_print("Batch Read Contacts", batch_read)
+    
+    #     updates = {cid: {"firstname": f"BatchUpdated_{i}"} for i, cid in enumerate(batch_contact_ids)}
+    #     batch_updated = client.updateContactBatch(updates)
+    #     print(f"Batch Update Contacts Success: {batch_updated}")
+
+    #     batch_read = client.getContactBatch(batch_contact_ids, ["email", "firstname", "lastname"])
+    #     pretty_print("Batch Read Updated Contacts", batch_read)
+    
+    #     batch_archived = client.archiveContactBatch(batch_contact_ids)
+    #     print(f"Batch Archive Contacts Success: {batch_archived}")
+
+    # -------------------------------------------------------------
+    # 7. BATCH OPERATIONS: COMPANIES (2026-09: Create -> Read -> Update -> Archive) -> TESTED
+    # -------------------------------------------------------------
+    # print("\n--- Testing Companies Batch Operations ---")
+    # batch_company_ids = client.createCompanyBatch([
+    #     {"name": "Batch Company Alpha", "city": "Milano"},
+    #     {"name": "Batch Company Beta", "city": "Torino"}
+    # ])
+    # print(f"Batch Companies Created IDs: {batch_company_ids}")
+    
+    # if batch_company_ids:
+    #     batch_read_companies = client.getCompanyBatch(batch_company_ids, ["name", "city"])
+    #     pretty_print("Batch Read Companies", batch_read_companies)
+    
+    #     comp_updates = {cid: {"city": "Firenze"} for cid in batch_company_ids}
+    #     batch_comp_updated = client.updateCompanyBatch(comp_updates)
+    #     print(f"Batch Update Companies Success: {batch_comp_updated}")
+
+    #     batch_read_companies = client.getCompanyBatch(batch_company_ids, ["name", "city"])
+    #     pretty_print("Batch Read Updated Companies", batch_read_companies)
+    
+    #     batch_comp_archived = client.archiveCompanyBatch(batch_company_ids)
+    #     print(f"Batch Archive Companies Success: {batch_comp_archived}")
+
+    # -------------------------------------------------------------
+    # 8. MERGE OPERATIONS (2026-09) -> TESTED
+    # CAUTION: Merging records is irreversible in HubSpot.
+    # -------------------------------------------------------------
+    # print("\n--- Testing Merge Contacts ---")
+    # merge_contact_ids = client.createContactBatch([
+    #     {"email": "merge_test_1@example.com", "firstname": "Firstname1", "lastname": "Lastname1"},
+    #     {"email": "merge_test_2@example.com", "firstname": "Firstname2", "lastname": "Lastname2"}
+    # ])
+    # print(f"Batch Contacts Created IDs: {merge_contact_ids}")
+    # merged_contact = client.mergeContacts(main_contact_id=merge_contact_ids[0], contact_to_merge_id=merge_contact_ids[1])
+    # print(f"Contacts Merge Result: {merged_contact}")
+
+    # -------------------------------------------------------------
+    # 9. ASSOCIATIONS (2026-09)
+    # -------------------------------------------------------------
 
     # TESTED: Batch Read Associations (Contacts -> Contacts)
     # print("\n--- Testing Batch Read Associations (Contacts -> Contacts) ---")
