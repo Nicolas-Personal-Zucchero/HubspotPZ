@@ -393,7 +393,7 @@ The library defines built-in defaults and constants for Personal Zucchero workfl
 
 | Constant | Value / Type | Purpose |
 |---|---|---|
-| `_BASER_URL` | `"https://api.hubapi.com"` | Base URL for HubSpot REST API |
+| `_BASE_URL` | `"https://api.hubapi.com"` | Base URL for HubSpot REST API |
 | `_MAX_BATCH_SIZE` | `100` | HubSpot batch limit ceiling |
 | `_CRM_API_VERSION` | `"2026-09"` | Active HubSpot CRM API version
 | `_AGENT_LIST_ID` | `67` | Pre-configured Agent list ID |

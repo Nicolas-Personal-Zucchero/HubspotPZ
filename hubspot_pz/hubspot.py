@@ -8,7 +8,7 @@ import requests
 
 
 class HubspotPZ:
-    _BASER_URL = "https://api.hubapi.com"
+    _BASE_URL = "https://api.hubapi.com"
     _MAX_BATCH_SIZE = 100
     _CRM_API_VERSION = "2026-09"
 
@@ -46,7 +46,7 @@ class HubspotPZ:
     ##########Properties############################################
 
     def _get_property_info(self, object_type: str, property_name: str) -> Any:
-        endpoint = self._BASER_URL + f'/crm/properties/{self._CRM_API_VERSION}/{object_type}/{property_name}'
+        endpoint = self._BASE_URL + f'/crm/properties/{self._CRM_API_VERSION}/{object_type}/{property_name}'
         r = requests.get(url=endpoint, headers=self._headers)
         
         if r.status_code != 200:
@@ -92,7 +92,7 @@ class HubspotPZ:
         if associations_objects is not None:
             params["associations"] = ",".join(associations_objects)
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
 
         r = requests.get(url=endpoint, headers=self._headers, params=params)
 
@@ -139,7 +139,7 @@ class HubspotPZ:
         :return: ID of the created object, or None on error
         """
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
         r = requests.post(url=endpoint, headers=self._headers, json={ "properties": properties })
         
         if r.status_code != 201:
@@ -163,7 +163,7 @@ class HubspotPZ:
         :return: True if successfully archived, False otherwise
         """
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
         r = requests.delete(url=endpoint, headers=self._headers)
         
         if r.status_code != 204:
@@ -189,7 +189,7 @@ class HubspotPZ:
         :return: True if successfully updated, False otherwise
         """
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
         r = requests.patch(url=endpoint, headers=self._headers, json={ "properties": properties })
         
         if r.status_code != 200:
@@ -229,7 +229,7 @@ class HubspotPZ:
         if associations_objects is not None:
             params["associations"] = ",".join(associations_objects)
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/{object_id}'
         r = requests.get(url=endpoint, headers=self._headers, params=params)
         
         if r.status_code != 200:
@@ -257,7 +257,7 @@ class HubspotPZ:
         :param properties_names: Properties of the object to retrieve
         :return: Dictionary with requested object properties, or None on error
         """
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/search'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/search'
         r = requests.post(url=endpoint, headers=self._headers,
                          json={"properties": properties_names,
                                "filterGroups":[
@@ -325,7 +325,7 @@ class HubspotPZ:
         return self._create_object("deals", properties)
     
     def getPipelineInfo(self, object_type: str, pipeline_id: str) -> Any:
-        endpoint = self._BASER_URL + f'/crm/pipelines/{self._CRM_API_VERSION}/{object_type}/{pipeline_id}'
+        endpoint = self._BASE_URL + f'/crm/pipelines/{self._CRM_API_VERSION}/{object_type}/{pipeline_id}'
         r = requests.get(url=endpoint, headers=self._headers)
         
         if r.status_code != 200:
@@ -363,7 +363,7 @@ class HubspotPZ:
         batch = properties_list[:self._MAX_BATCH_SIZE]
         remaining = properties_list[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/create'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/create'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"properties": properties} for properties in batch] })
@@ -400,7 +400,7 @@ class HubspotPZ:
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
         
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/archive'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/archive'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"id": id} for id in batch] })
@@ -433,7 +433,7 @@ class HubspotPZ:
         batch = dict(list(id_to_properties_list.items())[:self._MAX_BATCH_SIZE]) # First MAX_BATCH_SIZE elements
         remaining = dict(list(id_to_properties_list.items())[self._MAX_BATCH_SIZE:]) # Remaining elements
         
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/update'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/update'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"id": id, "properties": properties} for id, properties in batch.items()] })
@@ -474,7 +474,7 @@ class HubspotPZ:
         batch = id_list[:self._MAX_BATCH_SIZE]
         remaining = id_list[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/read'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/read'
         r = requests.post(url=endpoint,
                           headers=self._headers,
                           json={ "inputs": [{"id": id} for id in batch], "properties": properties_names })
@@ -545,7 +545,7 @@ class HubspotPZ:
         if after:
             params["after"] = after
 
-        endpoint = self._BASER_URL + f'/crm/lists/{self._CRM_API_VERSION}/{list_id}/memberships'
+        endpoint = self._BASE_URL + f'/crm/lists/{self._CRM_API_VERSION}/{list_id}/memberships'
 
         r = requests.get(url=endpoint, headers=self._headers, params=params)
 
@@ -584,7 +584,7 @@ class HubspotPZ:
         :return: List of associated object IDs, or None on error
         """
 
-        endpoint = self._BASER_URL + f"/crm/objects/{self._CRM_API_VERSION}/{from_object_type}/{from_object_id}/associations/{to_object_type}"
+        endpoint = self._BASE_URL + f"/crm/objects/{self._CRM_API_VERSION}/{from_object_type}/{from_object_id}/associations/{to_object_type}"
 
         r = requests.get(url=endpoint, headers=self._headers)
         if r.status_code != 200:
@@ -636,7 +636,7 @@ class HubspotPZ:
         batch = from_object_ids[:self._MAX_BATCH_SIZE]
         remaining = from_object_ids[self._MAX_BATCH_SIZE:]
 
-        endpoint = self._BASER_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
+        endpoint = self._BASE_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
         
         for toId in batch:
             # Add key if not present (with empty list default)
@@ -679,7 +679,7 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASER_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
+        endpoint = self._BASE_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
@@ -727,7 +727,7 @@ class HubspotPZ:
         if not associations:
             return True
 
-        endpoint = self._BASER_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
+        endpoint = self._BASE_URL + f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
         
         batch = associations[:self._MAX_BATCH_SIZE]
         remaining = associations[self._MAX_BATCH_SIZE:]
@@ -786,7 +786,7 @@ class HubspotPZ:
         :return: True if merged successfully, False otherwise
         """
 
-        endpoint = self._BASER_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/merge'
+        endpoint = self._BASE_URL + f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/merge'
 
         r = requests.post(url=endpoint, headers=self._headers, json={ "objectIdToMerge": object_to_merge_id, "primaryObjectId": main_object_id })
 
@@ -814,7 +814,7 @@ class HubspotPZ:
         :return: Signed URL of the file, or None on error
         """
 
-        endpoint = self._BASER_URL + f'/files/{self._CRM_API_VERSION}/files/{file_id}/signed-url'
+        endpoint = self._BASE_URL + f'/files/{self._CRM_API_VERSION}/files/{file_id}/signed-url'
 
         params: dict[str, Any] = {}
         if expiration_seconds is not None:
