@@ -373,12 +373,12 @@ class HubspotPZ:
     
     def createAgentDeal(self, properties: dict[str, str]) -> str | None:
         #https://app-eu1.hubspot.com/property-settings/25378285/properties?type=0-3&eschref=%2Fcontacts%2F25378285%2Fobjects%2F0-3%2Frestore&search=pip&action=edit&property=pipeline
-        properties["pipeline"] = "2405411057"
+        properties["pipeline"] = self._AGENT_PIPELINE_ID
         return self._create_object("deals", properties)
     
     def createContactDeal(self, properties: dict[str, str]) -> str | None:
         #https://app-eu1.hubspot.com/property-settings/25378285/properties?type=0-3&eschref=%2Fcontacts%2F25378285%2Fobjects%2F0-3%2Frestore&search=pip&action=edit&property=pipeline
-        properties["pipeline"] = "59157733"
+        properties["pipeline"] = self._CONTACT_PIPELINE_ID
         return self._create_object("deals", properties)
     
     def getPipelineInfo(self, object_type: str, pipeline_id: str) -> Any:
