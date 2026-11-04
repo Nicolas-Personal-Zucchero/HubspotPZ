@@ -115,48 +115,46 @@ class HubspotPZ:
         self,
         object_type: str,
         properties_names: list[str],
-        associations_objects: list[str] | None = None,
-        accumulated_objects: list[dict[str, str]] | None = None,
-        after: str | None = None
-    ) -> list[dict[str, str]]:
+        associations_objects: list[str] | None = None
+    ) -> list[dict[str, str]] | None:
         """
         Generic function to retrieve all objects of a given type (contacts, companies, etc.) from HubSpot.
         API Version 2026-09.
         
         :param object_type: Type of objects (e.g. 'contacts' or 'companies')
         :param properties_names: List of property names to retrieve for each object
-        :param accumulated_objects: List of accumulated objects during recursive calls
-        :param after: Pagination cursor for the next page
-        :return: List of requested objects
+        :param associations_objects: Associated objects to retrieve
+        :return: List of requested objects, or None on error
         """
-        if accumulated_objects is None:
-            accumulated_objects = []
-
-        params: dict[str, Any] = {"limit": 100}
-        if after:
-            params["after"] = after
-        if properties_names:
-            params["properties"] = properties_names
-        if associations_objects is not None:
-            params["associations"] = ",".join(associations_objects)
+        accumulated_objects: list[dict[str, str]] = []
 
         endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}'
+        current_after: str | None = None
 
-        r = self._request("GET", endpoint, params=params, error_context=f"the retrieval of all {object_type}")
+        while True:
+            params: dict[str, Any] = {"limit": 100}
+            if current_after:
+                params["after"] = current_after
+            if properties_names:
+                params["properties"] = properties_names
+            if associations_objects is not None:
+                params["associations"] = ",".join(associations_objects)
 
-        if r is None:
-            return None
-        
-        for result in r.json().get("results", []):
-            retrieved_properties = {prop: result.get("properties", {}).get(prop) or None for prop in properties_names}
-            retrieved_properties["id"] = result.get("id")
-            retrieved_properties = dict(sorted(retrieved_properties.items()))
-            retrieved_properties["associations"] = result.get("associations", None)
-            accumulated_objects.append(retrieved_properties)
+            r = self._request("GET", endpoint, params=params, error_context=f"the retrieval of all {object_type}")
+            if r is None:
+                return None
 
-        next_page = r.json().get("paging", {}).get("next", {}).get("after")
-        if next_page:
-            return self._get_all_objects(object_type, properties_names, associations_objects, accumulated_objects, next_page)
+            for result in r.json().get("results", []):
+                retrieved_properties = {prop: result.get("properties", {}).get(prop) or None for prop in properties_names}
+                retrieved_properties["id"] = result.get("id")
+                retrieved_properties = dict(sorted(retrieved_properties.items()))
+                retrieved_properties["associations"] = result.get("associations", None)
+                accumulated_objects.append(retrieved_properties)
+
+            next_page = r.json().get("paging", {}).get("next", {}).get("after")
+            if not next_page:
+                break
+            current_after = next_page
 
         return accumulated_objects
     
@@ -393,8 +391,7 @@ class HubspotPZ:
     def _create_object_batch(
         self,
         object_type: str,
-        properties_list: list[dict[str, str]],
-        accumulated_ids: list[str] | None = None
+        properties_list: list[dict[str, str]]
     ) -> list[str] | None:
         """
         Generic function to batch create objects (contacts, companies, etc.) on HubSpot.
@@ -403,35 +400,29 @@ class HubspotPZ:
         
         :param object_type: Type of object (e.g. 'contacts' or 'companies')
         :param properties_list: List of property dictionaries
-        :param accumulated_ids: List of accumulated IDs during recursive calls
         :return: List of created object IDs, or None on error
         """
-
-        if accumulated_ids is None:
-            accumulated_ids = []
-
-        # Base recursive case: if the list is empty, return accumulated IDs
         if not properties_list:
-            return accumulated_ids if accumulated_ids else None
+            return None
 
-        # Take up to the maximum batch size
-        batch = properties_list[:self._MAX_BATCH_SIZE]
-        remaining = properties_list[self._MAX_BATCH_SIZE:]
+        accumulated_ids: list[str] = []
 
         endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/create'
-        r = self._request(
-            "POST",
-            endpoint,
-            json={"inputs": [{"properties": properties} for properties in batch]},
-            expected_status=(200, 201),
-            error_context="the creation of a batch of objects on HubSpot"
-        )
 
-        if r is not None:
-            results = r.json().get("results", [])
-            accumulated_ids.extend([result.get("id") for result in results if result.get("id")])
-        
-        return self._create_object_batch(object_type, remaining, accumulated_ids)
+        for i in range(0, len(properties_list), self._MAX_BATCH_SIZE):
+            batch = properties_list[i : i + self._MAX_BATCH_SIZE]
+            r = self._request(
+                "POST",
+                endpoint,
+                json={"inputs": [{"properties": properties} for properties in batch]},
+                expected_status=(200, 201),
+                error_context="the creation of a batch of objects on HubSpot"
+            )
+            if r is not None:
+                results = r.json().get("results", [])
+                accumulated_ids.extend([result.get("id") for result in results if result.get("id")])
+
+        return accumulated_ids if accumulated_ids else None
 
     def _archive_object_batch(
         self,
@@ -446,27 +437,24 @@ class HubspotPZ:
         :param id_list: List of IDs to archive
         :return: True if successfully archived, False otherwise
         """
-
-        # Base recursive case: if the list is empty, return True
         if not id_list:
             return True
 
-        # Take up to the maximum batch size
-        batch = id_list[:self._MAX_BATCH_SIZE]
-        remaining = id_list[self._MAX_BATCH_SIZE:]
-        
         endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/archive'
-        r = self._request(
-            "POST",
-            endpoint,
-            json={"inputs": [{"id": id} for id in batch]},
-            expected_status=(200, 204),
-            error_context="the archivation of a batch of objects on HubSpot"
-        )
-        if r is None:
-            return False
-        
-        return self._archive_object_batch(object_type, remaining)
+
+        for i in range(0, len(id_list), self._MAX_BATCH_SIZE):
+            batch = id_list[i : i + self._MAX_BATCH_SIZE]
+            r = self._request(
+                "POST",
+                endpoint,
+                json={"inputs": [{"id": id} for id in batch]},
+                expected_status=(200, 204),
+                error_context="the archivation of a batch of objects on HubSpot"
+            )
+            if r is None:
+                return False
+
+        return True
         
     def _update_object_batch(
         self,
@@ -481,33 +469,31 @@ class HubspotPZ:
         :param id_to_properties_list: Dictionary mapping object IDs to property dictionaries to update
         :return: True if successfully updated, False otherwise
         """
-
-        # Base recursive case: if dictionary is empty, return True
         if not id_to_properties_list:
             return True
-        
-        # Take up to the maximum batch size
-        batch = dict(list(id_to_properties_list.items())[:self._MAX_BATCH_SIZE]) # First MAX_BATCH_SIZE elements
-        remaining = dict(list(id_to_properties_list.items())[self._MAX_BATCH_SIZE:]) # Remaining elements
-        
+
         endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/update'
-        r = self._request(
-            "POST",
-            endpoint,
-            json={"inputs": [{"id": id, "properties": properties} for id, properties in batch.items()]},
-            error_context="the update of a batch of objects on HubSpot"
-        )
-        if r is None:
-            return False
-        
-        return self._update_object_batch(object_type, remaining)
+        items = list(id_to_properties_list.items())
+
+        for i in range(0, len(items), self._MAX_BATCH_SIZE):
+            batch = items[i : i + self._MAX_BATCH_SIZE]
+            r = self._request(
+                "POST",
+                endpoint,
+                json={"inputs": [{"id": id, "properties": properties} for id, properties in batch]},
+                expected_status=200,
+                error_context="the update of a batch of objects on HubSpot"
+            )
+            if r is None:
+                return False
+
+        return True
 
     def _get_object_batch(
         self,
         object_type: str,
         id_list: list[str],
-        properties_names: list[str],
-        accumulated_objects: list[dict[str, str]] | None = None
+        properties_names: list[str]
     ) -> list[dict[str, str]] | None:
         """
         Generic function to batch retrieve objects (contacts, companies, etc.) from HubSpot.
@@ -516,41 +502,36 @@ class HubspotPZ:
         :param object_type: Type of objects (e.g. 'contacts' or 'companies')
         :param id_list: List of IDs to retrieve
         :param properties_names: List of property names to retrieve
-        :param accumulated_objects: Accumulated objects during recursive calls
         :return: List of dictionaries with requested properties, or None on error
         """
-
-        if accumulated_objects is None:
-            accumulated_objects = []
-
-        # Base recursive case: if the list is empty, return accumulated objects
         if not id_list:
-            return accumulated_objects if accumulated_objects else None
-        
-        # Take up to the maximum batch size
-        batch = id_list[:self._MAX_BATCH_SIZE]
-        remaining = id_list[self._MAX_BATCH_SIZE:]
+            return None
+
+        accumulated_objects: list[dict[str, str]] = []
 
         endpoint = f'/crm/objects/{self._CRM_API_VERSION}/{object_type}/batch/read'
-        r = self._request(
-            "POST",
-            endpoint,
-            json={"inputs": [{"id": id} for id in batch], "properties": properties_names},
-            expected_status=(200, 207),
-            error_context="the retrieval of a batch of objects on HubSpot"
-        )
-        if r is None:
-            return None
-        
-        output = []
-        for result in r.json().get("results", []):
-            retrieved_properties = {prop: result.get("properties", {}).get(prop) or None for prop in properties_names}
-            retrieved_properties["id"] = result.get("id")
-            retrieved_properties = dict(sorted(retrieved_properties.items()))
-            output.append(retrieved_properties)
-        accumulated_objects.extend(output)
-        
-        return self._get_object_batch(object_type, remaining, properties_names, accumulated_objects)
+
+        for i in range(0, len(id_list), self._MAX_BATCH_SIZE):
+            batch = id_list[i : i + self._MAX_BATCH_SIZE]
+            r = self._request(
+                "POST",
+                endpoint,
+                json={"inputs": [{"id": id} for id in batch], "properties": properties_names},
+                expected_status=(200, 207),
+                error_context="the retrieval of a batch of objects on HubSpot"
+            )
+            if r is None:
+                return None
+
+            output = []
+            for result in r.json().get("results", []):
+                retrieved_properties = {prop: result.get("properties", {}).get(prop) or None for prop in properties_names}
+                retrieved_properties["id"] = result.get("id")
+                retrieved_properties = dict(sorted(retrieved_properties.items()))
+                output.append(retrieved_properties)
+            accumulated_objects.extend(output)
+
+        return accumulated_objects if accumulated_objects else None
      
     def createContactBatch(self, properties_list: list[dict[str, str]]) -> list[str] | None:
         for properties in properties_list:
@@ -584,41 +565,41 @@ class HubspotPZ:
     #Tested and working
     def getListMembersIds(
         self,
-        list_id: str,
-        accumulated_ids: list[str] | None = None,
-        after: str | None = None
+        list_id: str
     ) -> list[str] | None:
         """
         Generic function to retrieve contact IDs belonging to a list on HubSpot.
         API Version 2026-09.
         
         :param list_id: ID of the list to retrieve members from
-        :param accumulated_ids: Accumulated IDs during recursive calls
-        :param after: Pagination cursor for the next page
         :return: List of member IDs, or None on error
         """
-        if accumulated_ids is None:
-            accumulated_ids = []
-
-        params: dict[str, Any] = {"limit": 250}
-        if after:
-            params["after"] = after
+        accumulated_ids: list[str] = []
 
         endpoint = f'/crm/lists/{self._CRM_API_VERSION}/{list_id}/memberships'
-        r = self._request(
-            "GET",
-            endpoint,
-            params=params,
-            error_context="the retrieval of the members of a list"
-        )
-        if r is None:
-            return None
-        
-        ids = [result.get("recordId") for result in r.json().get("results", []) if "recordId" in result]
-        accumulated_ids.extend(ids)
-        next_page = r.json().get("paging", {}).get("next", {}).get("after")
-        if next_page:
-            return self.getListMembersIds(list_id, accumulated_ids, next_page)
+        current_after: str | None = None
+
+        while True:
+            params: dict[str, Any] = {"limit": 250}
+            if current_after:
+                params["after"] = current_after
+
+            r = self._request(
+                "GET",
+                endpoint,
+                params=params,
+                error_context="the retrieval of the members of a list"
+            )
+            if r is None:
+                return None
+
+            ids = [result.get("recordId") for result in r.json().get("results", []) if "recordId" in result]
+            accumulated_ids.extend(ids)
+
+            next_page = r.json().get("paging", {}).get("next", {}).get("after")
+            if not next_page:
+                break
+            current_after = next_page
 
         return accumulated_ids
 
@@ -674,8 +655,7 @@ class HubspotPZ:
         self,
         from_object_type: str,
         to_object_type: str,
-        from_object_ids: list[str],
-        accumulated_associations: dict[str, list[str]] | None = None
+        from_object_ids: list[str]
     ) -> dict[str, list[str]] | None:
         """
         Generic function to batch retrieve associations for multiple objects on HubSpot.
@@ -684,43 +664,37 @@ class HubspotPZ:
         :param from_object_type: Source object type
         :param to_object_type: Target object type
         :param from_object_ids: List of source object IDs
-        :param accumulated_associations: Accumulated associations mapping
         :return: Mapping of source object IDs to lists of associated IDs, or None on error
         """
-
-        if accumulated_associations is None:
-            accumulated_associations = {}
-
-        # Base recursive case: if the list is empty, return accumulated associations
         if not from_object_ids:
-            return accumulated_associations if accumulated_associations else None
-        
-        # Take up to the maximum batch size
-        batch = from_object_ids[:self._MAX_BATCH_SIZE]
-        remaining = from_object_ids[self._MAX_BATCH_SIZE:]
+            return None
+
+        accumulated_associations: dict[str, list[str]] = {}
 
         endpoint = f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/read"
-        
-        for toId in batch:
-            # Add key if not present (with empty list default)
-            accumulated_associations.setdefault(toId, [])
-        
-        r = self._request(
-            "POST",
-            endpoint,
-            json={"inputs": [{"id": id} for id in batch]},
-            expected_status=(200, 207),
-            error_context="the retrieval in batch of associations between objects"
-        )
-        if r is None:
-            return None
-        
-        for result in r.json().get("results", []):
-            fromId = str(result.get("from").get("id"))
-            toids = [str(to["toObjectId"]) for to in result.get("to", [])]
-            accumulated_associations[fromId] = toids
 
-        return self._get_object_associations_batch(from_object_type, to_object_type, remaining, accumulated_associations)
+        for i in range(0, len(from_object_ids), self._MAX_BATCH_SIZE):
+            batch = from_object_ids[i : i + self._MAX_BATCH_SIZE]
+
+            for toId in batch:
+                accumulated_associations.setdefault(toId, [])
+
+            r = self._request(
+                "POST",
+                endpoint,
+                json={"inputs": [{"id": id} for id in batch]},
+                expected_status=(200, 207),
+                error_context="the retrieval in batch of associations between objects"
+            )
+            if r is None:
+                return None
+
+            for result in r.json().get("results", []):
+                fromId = str(result.get("from").get("id"))
+                toids = [str(to["toObjectId"]) for to in result.get("to", [])]
+                accumulated_associations[fromId] = toids
+
+        return accumulated_associations if accumulated_associations else None
     
     def _create_object_associations_batch(
         self,
@@ -729,7 +703,6 @@ class HubspotPZ:
         associationTypeId: int,
         associations: list[tuple[str, str]]
     ) -> bool:
-        
         """
         Generic function to batch create associations between multiple objects on HubSpot.
         API Version 2026-09.
@@ -740,39 +713,36 @@ class HubspotPZ:
         :param associations: List of tuples (fromId, toId) representing associations to create
         :return: True if successful, False otherwise
         """
-
-        # Base recursive case: if the list is empty, return True
         if not associations:
             return True
 
         endpoint = f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/create"
-        
-        batch = associations[:self._MAX_BATCH_SIZE]
-        remaining = associations[self._MAX_BATCH_SIZE:]
 
-        payload = {
-            "inputs": [
-                {
-                    "from": {"id": fromId},
-                    "to": {"id": toId},
-                    "types": [{
-                        "associationCategory": "HUBSPOT_DEFINED",
-                        "associationTypeId": associationTypeId
-                    }]
-                } for fromId, toId in batch
-            ]
-        }
-        r = self._request(
-            "POST",
-            endpoint,
-            json=payload,
-            expected_status=(200, 201),
-            error_context="the creation in batch of associations between objects"
-        )
-        if r is None:
-            return False
-        
-        return self._create_object_associations_batch(from_object_type, to_object_type, associationTypeId, remaining)
+        for i in range(0, len(associations), self._MAX_BATCH_SIZE):
+            batch = associations[i : i + self._MAX_BATCH_SIZE]
+            payload = {
+                "inputs": [
+                    {
+                        "from": {"id": fromId},
+                        "to": {"id": toId},
+                        "types": [{
+                            "associationCategory": "HUBSPOT_DEFINED",
+                            "associationTypeId": associationTypeId
+                        }]
+                    } for fromId, toId in batch
+                ]
+            }
+            r = self._request(
+                "POST",
+                endpoint,
+                json=payload,
+                expected_status=(200, 201),
+                error_context="the creation in batch of associations between objects"
+            )
+            if r is None:
+                return False
+
+        return True
 
     def _archive_object_associations_batch(
         self,
@@ -789,34 +759,31 @@ class HubspotPZ:
         :param associations: List of tuples (from_id, to_id) representing associations to archive
         :return: True if successful, False otherwise
         """
-
-        # Base recursive case: if the list is empty, return True
         if not associations:
             return True
 
         endpoint = f"/crm/associations/{self._CRM_API_VERSION}/{from_object_type}/{to_object_type}/batch/archive"
-        
-        batch = associations[:self._MAX_BATCH_SIZE]
-        remaining = associations[self._MAX_BATCH_SIZE:]
 
-        inputs = []
-        for from_id, to_id in batch:
-            inputs.append({
-                "from": {"id": str(from_id)},
-                "to": [{"id": str(to_id)}]
-            })
+        for i in range(0, len(associations), self._MAX_BATCH_SIZE):
+            batch = associations[i : i + self._MAX_BATCH_SIZE]
+            inputs = []
+            for from_id, to_id in batch:
+                inputs.append({
+                    "from": {"id": str(from_id)},
+                    "to": [{"id": str(to_id)}]
+                })
 
-        r = self._request(
-            "POST",
-            endpoint,
-            json={"inputs": inputs},
-            expected_status=(200, 204),
-            error_context="the archivation in batch of associations between objects"
-        )
-        if r is None:
-            return False
-        
-        return self._archive_object_associations_batch(from_object_type, to_object_type, remaining)
+            r = self._request(
+                "POST",
+                endpoint,
+                json={"inputs": inputs},
+                expected_status=(200, 204),
+                error_context="the archivation in batch of associations between objects"
+            )
+            if r is None:
+                return False
+
+        return True
     
     def getContactsAssociatedCompaniesBatch(self, contacts_ids: list[str]) -> dict[str, list[str]] | None:
         return self._get_object_associations_batch("contacts", "companies", contacts_ids)

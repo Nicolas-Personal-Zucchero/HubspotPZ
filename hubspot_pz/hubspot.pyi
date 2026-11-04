@@ -230,14 +230,10 @@ class HubspotPZ:
     def getListMembersIds(
         self,
         list_id: str,
-        accumulated_ids: list[str] | None = ...,
-        after: str | None = ...,
     ) -> list[str] | None:
         """Retrieve record IDs of all members in a HubSpot list with automatic pagination.
 
         :param list_id: ID of the HubSpot list.
-        :param accumulated_ids: Accumulated IDs during recursive pagination calls.
-        :param after: Pagination cursor.
         :return: List of member record IDs, or None on error.
         """
 
