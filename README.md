@@ -37,9 +37,11 @@ Key highlights include **automatic cursor pagination**, **transparent 100-item b
 
 ## Features
 
-- **Modern HubSpot API Versions**: Built on HubSpot CRM API v3 and updated to the `2026-09` Associations endpoints.
-- **Transparent Pagination**: Methods such as `getAllContacts`, `getAllCompanies`, `getAllDeals`, and `getListMembersIds` automatically follow pagination cursors (`after`), retrieving complete datasets without manual looping.
-- **Built-in Batch Chunking**: Automatically breaks large collections into 100-item chunks (`_MAX_BATCH_SIZE = 100`) as required by HubSpot's batch endpoints, recursing until all items are processed.
+- **Modern HubSpot API Versions**: Standardized across all endpoints to HubSpot version `2026-09`.
+- **Automatic Connection Pooling**: Built on `requests.Session` with HTTP Keep-Alive connection reuse for fast consecutive requests.
+- **Resilient Rate-Limiting & Retries**: Built-in exponential backoff and automatic handling of `429 Too Many Requests` (respecting HubSpot's `Retry-After` header) and transient 5xx server errors.
+- **Transparent Pagination**: Methods such as `getAllContacts`, `getAllCompanies`, `getAllDeals`, and `getListMembersIds` automatically follow pagination cursors, retrieving complete datasets without manual looping.
+- **Built-in Batch Chunking**: Automatically breaks large collections into 100-item chunks (`_MAX_BATCH_SIZE = 100`) using iterative loops, eliminating any risk of recursion limits.
 - **Strict Typing & Stubs**: Fully typed with PEP 561 compliance (`py.typed`) and detailed `.pyi` interface stubs for first-class autocomplete and type safety in VS Code, PyCharm, and `mypy`.
 - **Personal Zucchero Presets**: Out-of-the-box support for Mexal ERP fields, custom deal pipelines (Agent & Contact pipelines), and agent membership lists.
 - **Lightweight**: Minimal surface area powered by `requests`.

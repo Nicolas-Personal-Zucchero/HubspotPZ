@@ -1,4 +1,3 @@
-#pip install .
 from __future__ import annotations
 
 import logging
@@ -6,6 +5,8 @@ from datetime import date, datetime
 from typing import Any, ClassVar
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 
 class HubspotPZ:
@@ -29,8 +30,23 @@ class HubspotPZ:
 
     def __init__(self, token: str, logger: logging.Logger | None = None) -> None:
         self._session: requests.Session = requests.Session()
+        self._setup_session_retries()
         self._initialize_hubspot_headers(token)
         self._logger: logging.Logger = logger if logger is not None else logging.getLogger("hubspot_pz")
+
+    def _setup_session_retries(self) -> None:
+        """Configure automatic retry behavior with exponential backoff for rate limits and transient errors."""
+        retries = Retry(
+            total=3,
+            backoff_factor=1.0,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=None,
+            raise_on_status=False,
+            respect_retry_after_header=True
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+        self._session.mount("https://", adapter)
+        self._session.mount("http://", adapter)
 
     def _initialize_hubspot_headers(self, token: str) -> None:
         self._headers: dict[str, str] = {
@@ -73,13 +89,17 @@ class HubspotPZ:
         url = endpoint if endpoint.startswith("http") else f"{self._BASE_URL}{endpoint}"
         valid_statuses = (expected_status,) if isinstance(expected_status, int) else expected_status
 
-        r = self._session.request(
-            method=method.upper(),
-            url=url,
-            headers=self._headers,
-            params=params,
-            json=json
-        )
+        try:
+            r = self._session.request(
+                method=method.upper(),
+                url=url,
+                headers=self._headers,
+                params=params,
+                json=json
+            )
+        except requests.RequestException as e:
+            self._logger.error(f"Network error during {error_context}: {e}")
+            return None
 
         if r.status_code not in valid_statuses:
             self._logger.error(f"Error {r.status_code} during {error_context}.\nResponse Body: {r.text}")
