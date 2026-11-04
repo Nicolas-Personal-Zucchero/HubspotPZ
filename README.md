@@ -468,4 +468,3 @@ HubspotPZ/
 ## Author & License
 
 - **Author**: Nicolas Amadori ([nicolas.amadori02@gmail.com](mailto:nicolas.amadori02@gmail.com))
-- **Organization**: Personal Zucchero S.r.l.
